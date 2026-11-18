@@ -24,6 +24,7 @@ The `new-review` skill also upgrades an existing review to the current app: give
 - **Point.** A selection is the strongest signal of what you mean, then the words the cursor rests on while you talk.
 - **Models.** Comments use *Balanced* (Sonnet 5.5) by default; the summary uses *Best* (Opus 5.5). Each picker shows the model, and your choice is remembered per browser. If your plan lacks a model, its tier answers and the summary says which ran.
 - **Update PDF.** When the student sends a revision, *Update PDF* replaces the paper and moves every comment onto the new version (see below). It asks first, because the old PDF can't be restored.
+- **Export PDF.** Downloads one PDF to send the student: the summary and every comment up front, then the paper with each comment as a highlight whose note holds the comment. Anyone who can open the review can export it.
 - **Share.** The Share menu on the artifact controls who can open it. Viewers see the paper, the comments and the summary, but can't edit or call Claude; Editors can do everything you can. Sharing outside the organization depends on the organization's settings.
 
 ## How comments follow a revised PDF
@@ -40,7 +41,7 @@ Flags survive later updates until you dismiss them, so after several revisions a
 
 ## Development
 
-The app is one page, `app/mimir.html`, plus `app/anchor.js`. They run inside claude.ai's artifact viewer and use its runtime capabilities (`app/capabilities.json`): dictation for speech, `sample` for Claude, `db` for comments and the summary, `assets` for the PDF, and `user` for roles. PDF.js comes from cdnjs.
+The app is one page, `app/mimir.html`, plus `app/anchor.js`. They run inside claude.ai's artifact viewer and use its runtime capabilities (`app/capabilities.json`): dictation for speech, `sample` for Claude, `db` for comments and the summary, `assets` for the PDF, `downloads` for the export, and `user` for roles. PDF.js and pdf-lib come from cdnjs.
 
 Test the alignment with any JavaScript shell:
 

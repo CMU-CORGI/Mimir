@@ -185,6 +185,7 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 390px}
   </nav>
   <button class="btn small editor-only hidden" id="replaceBtn" title="Load a revised draft and move the comments onto it">Update PDF</button>
   <input type="file" id="replaceInput" accept="application/pdf,.pdf" hidden>
+  <button class="btn small hidden" id="exportBtn" title="Download the paper with the summary and comments, to send to the student">Export PDF</button>
   <label class="modelpick editor-only hidden">Model
     <select class="wait" id="modelSel" aria-label="Model for turning what you say into comments"></select></label>
   <div class="voice editor-only hidden" id="voiceBox">
@@ -275,7 +276,7 @@ const S = {
   buffer: "", partial: "", listening: false, queue: [], busy: false, ctl: null,
   activeId: null, waitMs: 3000, summaryEditing: false, model: "default", summaryModel: "complex", digest: [], trail: [], trailCand: null, utterOpen: false,
 };
-let db = null, sample = null, dictation = null, assets = null, user = null;
+let db = null, sample = null, dictation = null, assets = null, user = null, downloads = null;
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
@@ -308,6 +309,7 @@ function sampleErr(e) {
 async function openPdf(data, name, url) {
   if (!window.pdfjsLib) throw new Error("The PDF viewer didn’t load.");
   showOnly("wait"); $("#waitText").textContent = "Opening " + (name || "the paper") + "…";
+  S.pdfBytes = data ? data.slice() : null;
   const task = pdfjsLib.getDocument({ data: data || undefined, url: url || undefined, isEvalSupported: false, disableFontFace: true, useSystemFonts: false });
   const pdf = await task.promise;
   S.pdf = pdf; S.pages = []; S.fileName = name || "";
@@ -332,6 +334,7 @@ async function openPdf(data, name, url) {
   }
   for (const pg of S.pages) { try { pg.tc = await pg.page.getTextContent(); buildLines(pg); } catch (e) { pg.tc = null; } }
   renderHighlights();
+  showExport();
   for (const pg of S.pages) await renderPage(pg);
 }
 
@@ -1295,6 +1298,147 @@ async function updatePdf(file) {
 $("#replaceBtn").addEventListener("click", () => $("#replaceInput").click());
 $("#replaceInput").addEventListener("change", (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; updatePdf(f); });
 
+/* ---------- export: the paper with the summary and comments, as one PDF ---------- */
+// The front pages hold the summary and every comment in reading order; the
+// paper follows with each comment as a highlight whose note is the comment,
+// so the student can read it in any PDF viewer.
+function showExport() { $("#exportBtn").classList.toggle("hidden", !(downloads && S.pdf)); }
+
+let pdfLibLoad = null;
+function loadPdfLib() {
+  return (pdfLibLoad ||= new Promise((resolve, reject) => {
+    const sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js";
+    sc.onload = () => resolve(window.PDFLib);
+    sc.onerror = () => { pdfLibLoad = null; reject(new Error("the PDF writer didn’t load")); };
+    document.head.append(sc);
+  }));
+}
+
+// The standard PDF fonts only have the WinAnsi characters; spell out the
+// common others and mark the rest.
+const WIN_EXTRA = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
+const SPELL = { "≤": "<=", "≥": ">=", "≠": "!=", "→": "->", "←": "<-", "⇒": "=>", "′": "'", "″": "''", "−": "-", "∼": "~", "≈": "~", "⟦": "[", "⟧": "]", " ": " ", " ": " ", " ": " ", "ﬁ": "fi", "ﬂ": "fl", "ﬀ": "ff", "ﬃ": "ffi" };
+function winAnsi(t) {
+  let out = "";
+  for (const ch of String(t).normalize("NFC")) {
+    const c = ch.codePointAt(0);
+    if (SPELL[ch] != null) out += SPELL[ch];
+    else if ((c >= 0x20 && c <= 0x7e) || (c >= 0xa0 && c <= 0xff) || WIN_EXTRA.includes(ch)) out += ch;
+    else if (ch === "\n" || ch === "\t") out += " ";
+    else out += "?";
+  }
+  return out;
+}
+
+function addHighlights(PDFLib, doc) {
+  const { PDFHexString } = PDFLib, ctx = doc.context, pages = doc.getPages();
+  // Viewers that don't draw highlights themselves use this appearance: the marker color, multiplied over the text.
+  const gs = ctx.register(ctx.obj({ Type: "ExtGState", BM: "Multiply" }));
+  for (const c of sortedComments()) {
+    const page = c.page != null && pages[c.page - 1];
+    if (!page || !Array.isArray(c.rects) || !c.rects.length || page.getRotation().angle % 360) continue;
+    const box = page.getCropBox(), quads = [], fills = [];
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const r of c.rects) {
+      const l = box.x + r.x * box.width, rt = l + r.w * box.width, top = box.y + box.height - r.y * box.height, bot = top - r.h * box.height;
+      quads.push(l, top, rt, top, l, bot, rt, bot);
+      fills.push(PDFLib.rectangle(l, bot, rt - l, top - bot), PDFLib.fill());
+      x0 = Math.min(x0, l); x1 = Math.max(x1, rt); y0 = Math.min(y0, bot); y1 = Math.max(y1, top);
+    }
+    const annot = ctx.obj({
+      Type: "Annot", Subtype: "Highlight", F: 4, Rect: [x0, y0, x1, y1], QuadPoints: quads, C: [0.95, 0.81, 0.23],
+      Contents: PDFHexString.fromText("#" + c.n + ": " + (c.text || "")), T: PDFHexString.fromText("Reviewer"),
+    });
+    const ap = ctx.formXObject([PDFLib.pushGraphicsState(), PDFLib.setGraphicsState("GS0"), PDFLib.setFillingRgbColor(0.95, 0.81, 0.23), ...fills, PDFLib.popGraphicsState()],
+      { BBox: [x0, y0, x1, y1], Resources: { ExtGState: { GS0: gs } } });
+    annot.set(PDFLib.PDFName.of("AP"), ctx.obj({ N: ctx.register(ap) }));
+    page.node.addAnnot(ctx.register(annot));
+  }
+}
+
+// Writes the summary and the comment list onto new pages at the front.
+async function addFrontPages(PDFLib, doc) {
+  const { StandardFonts, rgb } = PDFLib;
+  const F = { body: await doc.embedFont(StandardFonts.Helvetica), bold: await doc.embedFont(StandardFonts.HelveticaBold), quote: await doc.embedFont(StandardFonts.HelveticaOblique) };
+  const ink = rgb(0.11, 0.13, 0.16), muted = rgb(0.35, 0.38, 0.42);
+  const first = doc.getPage(0).getSize(), W = first.width, H = first.height, M = Math.min(64, W * 0.1), maxW = W - 2 * M;
+  let page = null, y = 0, n = 0;
+  const newPage = () => { page = doc.insertPage(n++, [W, H]); y = H - M; };
+  const wrap = (text, font, size, width) => {
+    const lines = []; let line = "";
+    for (let word of winAnsi(text).split(/ +/)) {
+      while (font.widthOfTextAtSize(word, size) > width) { let k = word.length - 1; while (k > 1 && font.widthOfTextAtSize(word.slice(0, k), size) > width) k--; if (line) { lines.push(line); line = ""; } lines.push(word.slice(0, k)); word = word.slice(k); }
+      const t = line ? line + " " + word : word;
+      if (line && font.widthOfTextAtSize(t, size) > width) { lines.push(line); line = word; } else line = t;
+    }
+    if (line) lines.push(line);
+    return lines;
+  };
+  const text = (t, { font = F.body, size = 10.5, color = ink, indent = 0, before = 0, after = 4, bullet = "" } = {}) => {
+    const lead = size * 1.38, lines = wrap(t, font, size, maxW - indent);
+    if (!page) newPage();
+    y -= before;
+    lines.forEach((ln, i) => {
+      if (y - lead < M) newPage();
+      y -= lead;
+      if (i === 0 && bullet) page.drawText(bullet, { x: M + indent - 11, y, size, font: F.body, color });
+      page.drawText(ln, { x: M + indent, y, size, font, color });
+    });
+    y -= after;
+  };
+  const strip = (t) => t.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2").replace(/`([^`]+)`/g, "$1");
+
+  const all = sortedComments(), general = all.filter((c) => c.page == null), placed = all.filter((c) => c.page != null);
+  const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+  const summary = (S.summary || "").replace(/\r/g, "").trim().split("\n");
+  const h1 = /^#\s+(.*)$/.exec(summary[0] || "");
+  text(h1 ? strip(h1[1]) : "Review: " + S.title, { font: F.bold, size: 18, after: 4 });
+  if (h1) summary.shift();
+  text((S.fileName || S.title) + " · " + date + " · " + all.length + " comment" + (all.length === 1 ? "" : "s") + ", also highlighted in the paper after these pages", { size: 9.5, color: muted, after: 14 });
+  for (const raw of summary) {
+    const ln = raw.trim(); let m;
+    if (!ln) { y -= 4; continue; }
+    if ((m = /^(#{1,3})\s+(.*)$/.exec(ln))) text(strip(m[2]), { font: F.bold, size: [0, 18, 13, 11.5][m[1].length], before: m[1].length === 1 ? 0 : 10, after: 5 });
+    else if ((m = /^[-*]\s+(.*)$/.exec(ln))) text(strip(m[1]), { indent: 14, bullet: "•", after: 3 });
+    else if ((m = /^(\d+)[.)]\s+(.*)$/.exec(ln))) text(strip(m[2]), { indent: 14, bullet: m[1] + ".", after: 3 });
+    else text(strip(ln));
+  }
+  const section = (title, cs) => {
+    if (!cs.length) return;
+    text(title, { font: F.bold, size: 13, before: 16, after: 6 });
+    for (const c of cs) {
+      text("#" + c.n + (c.page != null ? "   " + locText(c) : ""), { font: F.bold, size: 9.5, color: muted, before: 6, after: 1 });
+      if (c.quote) text("“" + c.quote.slice(0, 400) + (c.quote.length > 400 ? "…" : "") + "”", { font: F.quote, size: 9.5, color: muted, after: 2 });
+      text(c.text || "");
+    }
+  };
+  section("General comments", general);
+  section("Comments on the paper", placed);
+}
+
+async function exportPdf() {
+  if (!downloads || !S.pdf) return;
+  const btn = $("#exportBtn"); btn.disabled = true; status("Building the PDF…");
+  try {
+    const PDFLib = await loadPdfLib();
+    let bytes = S.pdfBytes;
+    if (!bytes) { const r = await fetch("/_blob/" + S.loadedAsset); if (!r.ok) throw new Error("the paper couldn’t be fetched (HTTP " + r.status + ")"); bytes = new Uint8Array(await r.arrayBuffer()); }
+    const doc = await PDFLib.PDFDocument.load(bytes.slice(), { ignoreEncryption: true });
+    addHighlights(PDFLib, doc);
+    await addFrontPages(PDFLib, doc);
+    const out = await doc.save();
+    const name = (S.title || "Paper").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 120) + " - review.pdf";
+    status("");
+    await downloads.save({ filename: name, data: out });
+    status("Saved " + name + ".");
+  } catch (e) {
+    const m = { declined: "", unavailable: "Downloads aren’t available here.", rate_limited: "A download is already waiting for you to confirm." }[e && e.code];
+    status(m != null ? m : "The PDF couldn’t be built: " + ((e && (e.message || e.code)) || e), m !== "");
+  } finally { btn.disabled = false; }
+}
+$("#exportBtn").addEventListener("click", exportPdf);
+
 /* ---------- start ---------- */
 function applyRole() {
   document.querySelectorAll(".editor-only").forEach((n) => n.classList.toggle("hidden", !S.canEdit));
@@ -1306,7 +1450,8 @@ async function init() {
   $("#modelSel").addEventListener("change", (e) => { S.model = e.target.value; store("mimir.model.comments", S.model); });
   setTab(location.hash.slice(1)); renderComments(); renderChat(); renderSummary();
   const use = (n) => (window.claude && window.claude.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
-  [db, sample, dictation, assets, user] = await Promise.all(["db", "sample", "dictation", "assets", "user"].map(use));
+  [db, sample, dictation, assets, user, downloads] = await Promise.all(["db", "sample", "dictation", "assets", "user", "downloads"].map(use));
+  showExport();
   S.canEdit = user ? await user.canEdit().catch(() => false) : !db;
   S.uid = user ? await user.id().catch(() => null) : null;
   applyRole(); wireDictation(); renderComments(); renderSummary();

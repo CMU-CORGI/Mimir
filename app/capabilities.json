@@ -2,11 +2,20 @@
   "assets": {},
   "db": {
     "rules": [
-      { "path": "comments", "read": "view", "write": "admin" },
-      { "path": "review", "read": "view", "write": "admin" }
+      {
+        "path": "comments",
+        "read": "view",
+        "write": "admin"
+      },
+      {
+        "path": "review",
+        "read": "view",
+        "write": "admin"
+      }
     ]
   },
   "dictation": {},
   "sample": {},
-  "user": {}
+  "user": {},
+  "downloads": true
 }
