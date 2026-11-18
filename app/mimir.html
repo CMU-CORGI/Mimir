@@ -1,0 +1,1152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Paper review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --desk:#E3E5E8; --surface:#F7F8F9; --raised:#FFFFFF; --ink:#1D2228; --muted:#5A626C; --rule:#CBD0D6;
+  --marker:#F2CF3A; --marker-soft:rgba(242,207,58,.38); --marker-strong:rgba(242,207,58,.62);
+  --pointer:#2F63C9; --pointer-soft:rgba(47,99,201,.10); --danger:#B3261E; --ok:#1F7A4D;
+  --ui:"Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --read:"Newsreader", "Iowan Old Style", Georgia, serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --desk:#14171B; --surface:#1C2025; --raised:#23282E; --ink:#E5E8EB; --muted:#9AA3AD; --rule:#2F353C;
+    --marker:#E2BC2C; --marker-soft:rgba(226,188,44,.34); --marker-strong:rgba(226,188,44,.58);
+    --pointer:#76A0F4; --pointer-soft:rgba(118,160,244,.14); --danger:#F08A80; --ok:#6CC799;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --desk:#14171B; --surface:#1C2025; --raised:#23282E; --ink:#E5E8EB; --muted:#9AA3AD; --rule:#2F353C;
+  --marker:#E2BC2C; --marker-soft:rgba(226,188,44,.34); --marker-strong:rgba(226,188,44,.58);
+  --pointer:#76A0F4; --pointer-soft:rgba(118,160,244,.14); --danger:#F08A80; --ok:#6CC799;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{height:100%;margin:0;background:var(--desk);color:var(--ink);font:15px/1.45 var(--ui);display:flex;flex-direction:column;overflow:hidden}
+button,select,textarea,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--pointer);outline-offset:2px}
+
+/* Top bar */
+.bar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.doc-title{font-weight:700;font-size:15px;margin:0;flex:1 1 220px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{display:flex;gap:2px;background:var(--desk);padding:3px;border-radius:9px}
+.tabs a{padding:5px 14px;border-radius:7px;text-decoration:none;color:var(--muted);font-weight:700;font-size:14px}
+.tabs a[aria-current="page"]{background:var(--raised);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.voice{display:flex;align-items:center;gap:10px}
+.mic{display:flex;align-items:center;gap:8px;border:1px solid var(--rule);background:var(--raised);border-radius:999px;padding:6px 14px 6px 10px;font-weight:700}
+.mic .dot{width:12px;height:12px;border-radius:50%;background:var(--muted)}
+.mic[data-state="listening"]{background:var(--marker);border-color:var(--marker);color:#1D2228}
+.mic[data-state="listening"] .dot{background:#1D2228;animation:breathe 1.6s ease-in-out infinite}
+.mic[data-state="starting"] .dot{background:var(--marker)}
+@keyframes breathe{50%{transform:scale(.55)}}
+.wait{border:1px solid var(--rule);background:var(--raised);border-radius:8px;padding:5px 6px;font-size:13px}
+.hidden{display:none !important}
+
+/* Main */
+main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 390px}
+.stage{min-height:0;overflow:auto;position:relative}
+.panel{min-height:0;display:flex;flex-direction:column;background:var(--surface);border-left:1px solid var(--rule)}
+@media (max-width: 860px){
+  main{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,45%)}
+  .panel{border-left:0;border-top:1px solid var(--rule)}
+}
+
+/* Pages */
+.pages{display:flex;flex-direction:column;align-items:flex-start;gap:18px;padding:24px 16px 80px;width:max-content;min-width:100%}
+.stage{overscroll-behavior:contain}
+.page{position:relative;margin-inline:auto;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18),0 0 0 1px rgba(0,0,0,.04);flex:none}
+.page canvas{display:block}
+.page .hl-layer,.page .focus-layer{position:absolute;inset:0;pointer-events:none}
+.page .hl-layer{z-index:1}
+.page .focus-layer{z-index:3}
+.hl{position:absolute;background:var(--marker-soft);mix-blend-mode:multiply;border-radius:2px;pointer-events:auto;cursor:pointer}
+.hl.active{background:var(--marker-strong);box-shadow:0 0 0 2px var(--marker)}
+.focus{position:absolute;border-left:3px solid var(--pointer);background:var(--pointer-soft);border-radius:0 3px 3px 0;transition:top .08s linear,height .08s linear}
+.wordbox{position:absolute;border-bottom:2px solid var(--pointer);background:var(--pointer-soft);border-radius:2px}
+.page-num{position:absolute;left:-44px;top:4px;font-size:12px;color:var(--muted)}
+@media (max-width:860px){.page-num{display:none}}
+
+/* pdf.js text layer */
+.textLayer{position:absolute;text-align:initial;inset:0;overflow:hidden;line-height:1;text-size-adjust:none;-webkit-text-size-adjust:none;forced-color-adjust:none;transform-origin:0 0;z-index:2}
+.textLayer span,.textLayer br{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}
+.textLayer ::selection{background:rgba(47,99,201,.28)}
+.textLayer .endOfContent{display:block;position:absolute;inset:100% 0 0;z-index:-1;cursor:default;user-select:none}
+
+/* Empty / upload */
+.empty{max-width:520px;margin:12vh auto 0;padding:0 20px}
+.empty h1{font:600 30px/1.2 var(--read);margin:0 0 10px}
+.empty p{color:var(--muted);margin:0 0 22px}
+.drop{border:2px dashed var(--rule);border-radius:14px;padding:34px 20px;text-align:center;background:var(--surface)}
+.drop.over{border-color:var(--pointer);background:var(--pointer-soft)}
+.btn{border:1px solid var(--rule);background:var(--raised);border-radius:8px;padding:7px 14px;font-weight:700}
+.btn.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.btn.small{padding:3px 9px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+.linkbtn{border:0;background:none;padding:0;color:var(--muted);font-size:13px;text-decoration:underline}
+
+/* Panel */
+.where{padding:12px 16px 10px;border-bottom:1px solid var(--rule)}
+.where .label{font-size:12px;color:var(--muted)}
+.where .line{font-family:var(--read);font-size:15px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.where .loc{font-weight:700;font-size:13px}
+.heard{padding:10px 16px;border-bottom:1px solid var(--rule);background:var(--raised)}
+.heard .text{min-height:1.4em;white-space:pre-wrap}
+.heard .text .partial{color:var(--muted)}
+.heard .row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.drain{flex:1;height:3px;background:var(--rule);border-radius:2px;overflow:hidden}
+.drain i{display:block;height:100%;background:var(--pointer);transform-origin:left;transform:scaleX(0)}
+.drain i.run{animation:drain var(--wait,3s) linear forwards}
+@keyframes drain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.reply{padding:10px 16px;border-bottom:1px solid var(--rule)}
+.reply .who{font-size:12px;color:var(--muted)}
+.reply .body{white-space:pre-wrap}
+.reply.thinking .body{color:var(--muted)}
+.seg{display:flex;gap:16px;padding:8px 16px 0;border-bottom:1px solid var(--rule)}
+.seg button{border:0;background:none;padding:6px 0 8px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent}
+.seg button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.list{flex:1;min-height:0;overflow:auto;padding:8px 0 16px}
+.card{padding:10px 16px;border-bottom:1px solid var(--rule);cursor:pointer}
+.card:hover,.card.active{background:var(--raised)}
+.card.active{box-shadow:inset 3px 0 0 var(--marker)}
+.card .meta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.card .quote{font-family:var(--read);font-style:italic;color:var(--muted);font-size:14px;margin:4px 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .ctext{white-space:pre-wrap;outline:none;border-radius:4px}
+.card .ctext[contenteditable="true"]:focus{background:var(--surface);box-shadow:0 0 0 1px var(--rule);padding:2px 4px;margin:-2px -4px}
+.card.flash{animation:flash 1.2s ease-out}
+@keyframes flash{from{background:var(--marker-soft)}}
+.turn{padding:8px 16px}
+.turn .who{font-size:12px;color:var(--muted)}
+.turn .body{white-space:pre-wrap}
+.turn.you .body{font-family:var(--read);font-size:15px}
+.turn.log .body{font-size:13px;color:var(--muted)}
+.turn.log.fail .body{color:var(--danger)}
+.none{padding:18px 16px;color:var(--muted)}
+.composer{border-top:1px solid var(--rule);padding:10px 12px;display:flex;gap:8px;align-items:flex-end;background:var(--surface)}
+.composer textarea{flex:1;resize:none;border:1px solid var(--rule);border-radius:8px;padding:7px 9px;background:var(--raised);min-height:38px;max-height:120px}
+.status{font-size:13px;color:var(--muted);padding:6px 16px;min-height:0}
+.status.err{color:var(--danger)}
+
+/* Summary */
+.summary{max-width:720px;margin:0 auto;padding:40px 28px 100px;font-family:var(--read);font-size:18px;line-height:1.6}
+.summary h1{font-size:28px;line-height:1.25;margin:0 0 18px;font-weight:600}
+.summary h2{font-family:var(--ui);font-size:16px;margin:30px 0 8px}
+.summary h3{font-family:var(--ui);font-size:15px;margin:22px 0 6px}
+.summary ul,.summary ol{padding-left:1.3em}
+.summary li{margin:6px 0}
+.summary code{font-size:.9em;background:var(--surface);padding:0 4px;border-radius:4px}
+.sumtools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;font-family:var(--ui);font-size:14px}
+.sumedit{width:100%;min-height:60vh;border:1px solid var(--rule);border-radius:10px;padding:14px;background:var(--raised);font:15px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+.summary .placeholder{font-family:var(--ui);color:var(--muted);font-size:16px}
+@media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <h1 class="doc-title" id="docTitle">Paper review</h1>
+  <nav class="tabs" aria-label="View">
+    <a href="#review" id="tabReview" aria-current="page">Paper</a>
+    <a href="#summary" id="tabSummary">Summary</a>
+  </nav>
+  <button class="btn small editor-only hidden" id="newBtn">New review</button>
+  <label class="editor-only hidden" style="font-size:13px;color:var(--muted)">Model
+    <select class="wait" id="modelSel" aria-label="Claude model">
+      <option value="quick">Fast</option><option value="default">Balanced</option><option value="complex" selected>Best</option>
+    </select></label>
+  <div class="voice editor-only hidden" id="voiceBox">
+    <button class="mic" id="micBtn" data-state="idle" aria-pressed="false"><span class="dot" aria-hidden="true"></span><span id="micLabel">Start talking</span></button>
+    <label class="sr" style="font-size:13px;color:var(--muted)">Send after
+      <select class="wait" id="waitSel" aria-label="Send after a pause of">
+        <option value="2000">2 s</option><option value="3000" selected>3 s</option><option value="5000">5 s</option><option value="8000">8 s</option>
+      </select> pause</label>
+  </div>
+</header>
+
+<main>
+  <section class="stage" id="stage" aria-label="Paper">
+    <div class="empty hidden" id="emptyBox">
+      <h1>Review a paper by talking</h1>
+      <p>Open the PDF, start talking, and point at what you mean. Each comment lands on the passage under your cursor or selection.</p>
+      <div class="drop" id="drop">
+        <p style="margin:0 0 12px;color:var(--ink)">Drop the PDF here</p>
+        <button class="btn primary" id="pickBtn">Choose PDF</button>
+        <input type="file" id="fileInput" accept="application/pdf,.pdf" hidden>
+      </div>
+    </div>
+    <div class="empty hidden" id="waitBox"><p id="waitText">Opening the paper…</p></div>
+    <div class="pages hidden" id="pages"></div>
+    <article class="summary hidden" id="summaryView"></article>
+  </section>
+
+  <aside class="panel" aria-label="Review">
+    <div class="where" id="whereBox">
+      <div class="label">Pointing at</div>
+      <div class="loc" id="whereLoc">Nothing yet. Move the cursor over a line, or select text.</div>
+      <div class="line" id="whereLine"></div>
+    </div>
+    <div class="heard hidden" id="heardBox" aria-live="polite">
+      <div class="text" id="heardText"></div>
+      <div class="row">
+        <div class="drain"><i id="drainBar"></i></div>
+        <button class="btn small" id="sendNow">Send now</button>
+        <button class="linkbtn" id="discard">Discard</button>
+      </div>
+    </div>
+    <div class="reply hidden" id="replyBox" aria-live="polite">
+      <div class="who">Claude</div>
+      <div class="body" id="replyText"></div>
+      <div class="row" style="margin-top:6px"><button class="linkbtn hidden" id="stopBtn">Stop</button></div>
+    </div>
+    <div class="status" id="status" role="status"></div>
+    <div class="seg" role="tablist" id="seg">
+      <button role="tab" aria-selected="true" id="segComments">Comments <span id="ccount"></span></button>
+      <button role="tab" aria-selected="false" id="segChat" class="editor-only hidden">Conversation</button>
+    </div>
+    <div class="list" id="commentList"></div>
+    <div class="list hidden" id="chatList"></div>
+    <div class="composer editor-only hidden" id="composer">
+      <textarea id="typeBox" rows="1" placeholder="Or type here, Enter to send"></textarea>
+      <button class="btn" id="typeSend">Send</button>
+    </div>
+  </aside>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+const S = {
+  pdf: null, pages: [], title: "", fileName: "", loadedAsset: null, metaSeen: false,
+  comments: [], summary: "", turns: [], canEdit: false, uid: null,
+  tab: "review", seg: "comments", hover: null, startHover: null, startSel: null,
+  buffer: "", partial: "", listening: false, queue: [], busy: false, ctl: null,
+  activeId: null, waitMs: 3000, summaryEditing: false, model: "complex", digest: [], trail: [], trailCand: null, utterOpen: false,
+};
+let db = null, sample = null, dictation = null, assets = null, user = null;
+
+if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+/* ---------- small helpers ---------- */
+function status(msg, err) { const s = $("#status"); s.textContent = msg || ""; s.classList.toggle("err", !!err); }
+window.addEventListener("error", (e) => status("Page error: " + e.message, true));
+window.addEventListener("unhandledrejection", (e) => status("Page error: " + ((e.reason && (e.reason.message || e.reason.code)) || e.reason), true));
+function locText(c) {
+  if (!c || c.page == null) return "General";
+  return "Page " + c.page + (c.line != null ? ", line " + c.line : "");
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function newId() { try { return crypto.randomUUID().replace(/-/g, "").slice(0, 20); } catch { return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); } }
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { return null; } }
+function sampleErr(e) {
+  const m = {
+    not_granted: "Claude isn’t allowed on this page. Allow it from the page’s Permissions menu.",
+    sampling_disabled: "Claude isn’t available for this account.",
+    rate_limited: "Too many requests to Claude right now. Wait a moment, then send again.",
+    session_expired: "Your session expired. Sign in again.",
+    refused: "Claude declined that request.",
+    invalid_json: "Claude’s answer couldn’t be read. Say it again.",
+    prompt_too_large: "The paper is too long to send to Claude in one request.",
+    cancelled: "",
+  };
+  return e && e.code in m ? m[e.code] : "Claude didn’t answer (" + ((e && (e.code || e.message)) || "error") + "). Send again.";
+}
+
+/* ---------- PDF ---------- */
+async function openPdf(data, name, url) {
+  if (!window.pdfjsLib) throw new Error("The PDF viewer didn’t load.");
+  showOnly("wait"); $("#waitText").textContent = "Opening " + (name || "the paper") + "…";
+  const task = pdfjsLib.getDocument({ data: data || undefined, url: url || undefined, isEvalSupported: false, disableFontFace: true, useSystemFonts: false });
+  const pdf = await task.promise;
+  S.pdf = pdf; S.pages = []; S.fileName = name || "";
+  let title = (name || "Paper").replace(/\.pdf$/i, "");
+  try { const md = await pdf.getMetadata(); const t = md && md.info && md.info.Title; if (t && t.trim()) title = t.trim(); } catch {}
+  S.title = title; $("#docTitle").textContent = title; document.title = "Review: " + title;
+  const pagesEl = $("#pages"); pagesEl.innerHTML = "";
+  showOnly(S.tab === "summary" ? "summary" : "pages");
+  const avail = Math.max(320, $("#stage").clientWidth - 110);
+  const first = await pdf.getPage(1);
+  const scale = Math.max(0.6, Math.min(1.8, avail / first.getViewport({ scale: 1 }).width));
+  S.scale = scale; S.zoomMin = scale * 0.5; S.zoomMax = Math.min(scale * 4, 6); liveZoom = 1; pagesEl.style.zoom = "";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = i === 1 ? first : await pdf.getPage(i);
+    const vp = page.getViewport({ scale });
+    const pe = el("div", "page"); pe.dataset.n = i; pe.style.width = vp.width + "px"; pe.style.height = vp.height + "px";
+    const c = document.createElement("canvas"); c.style.width = vp.width + "px"; c.style.height = vp.height + "px";
+    const hl = el("div", "hl-layer"), tl = el("div", "textLayer"), fl = el("div", "focus-layer");
+    const pn = el("div", "page-num", String(i));
+    pe.append(c, hl, tl, fl, pn); pagesEl.append(pe);
+    S.pages.push({ num: i, page, vp, el: pe, hl, tl, fl, lines: [] });
+  }
+  for (const pg of S.pages) { try { pg.tc = await pg.page.getTextContent(); buildLines(pg); } catch (e) { pg.tc = null; } }
+  renderHighlights();
+  for (const pg of S.pages) await renderPage(pg);
+}
+
+async function renderPage(pg) {
+  const gen = pg.gen = (pg.gen || 0) + 1;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(16e6 / (pg.vp.width * pg.vp.height)));
+  const c = document.createElement("canvas"); c.style.width = pg.vp.width + "px"; c.style.height = pg.vp.height + "px";
+  c.width = Math.floor(pg.vp.width * dpr); c.height = Math.floor(pg.vp.height * dpr);
+  try { pg.task = pg.page.render({ canvasContext: c.getContext("2d"), viewport: pg.vp, transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null }); await pg.task.promise; } catch (e) { if (gen !== pg.gen) return; console.warn(e); }
+  if (gen !== pg.gen) return;
+  pg.el.querySelector("canvas").replaceWith(c);
+  if (pg.tc) {
+    pg.tl.innerHTML = "";
+    pg.tl.style.setProperty("--scale-factor", pg.vp.scale);
+    const divs = [];
+    try { await pdfjsLib.renderTextLayer({ textContentSource: pg.tc, container: pg.tl, viewport: pg.vp, textDivs: divs }).promise; } catch (e) { console.warn(e); }
+    if (gen !== pg.gen) return;
+    pg.itemDiv = new Map(); let d = 0;
+    pg.tc.items.forEach((it, i) => {
+      if (typeof it.str !== "string" || !it.str) return;
+      for (let k = d; k < Math.min(divs.length, d + 4); k++) if (divs[k].textContent === it.str) { pg.itemDiv.set(i, divs[k]); d = k + 1; break; }
+    });
+  }
+}
+
+function buildLines(pg) {
+  const [vx0, vy0, vx1, vy1] = pg.page.view; const W = vx1 - vx0;
+  const items = [], margin = [];
+  pg.marginItems = new Set(); pg.itemLine = {}; pg.hay = null;
+  pg.tc.items.forEach((it, idx) => {
+    const str = it.str; if (!str || !str.trim()) return;
+    const t = it.transform; const x = t[4], y = t[5], h = Math.hypot(t[2], t[3]) || 8, w = it.width || 0;
+    const rx = x - vx0;
+    if (/^\d{1,4}$/.test(str.trim()) && (rx < W * 0.09 || rx + w > W * 0.91)) { margin.push({ y, n: +str.trim(), side: rx < W / 2 ? 0 : 1 }); pg.marginItems.add(idx); return; }
+    items.push({ i: idx, x, y, w, h, s: str, col: rx < W * 0.5 - 8 ? 0 : 1 });
+  });
+  items.sort((a, b) => a.col - b.col || b.y - a.y || a.x - b.x);
+  const lines = [];
+  for (const it of items) {
+    const L = lines[lines.length - 1];
+    if (L && L.col === it.col && Math.abs(L.y - it.y) < Math.max(2, it.h * 0.45)) L.items.push(it);
+    else lines.push({ col: it.col, y: it.y, items: [it] });
+  }
+  const sides = new Set(margin.map((m) => m.side));
+  for (const L of lines) {
+    L.items.sort((a, b) => a.x - b.x);
+    L.x1 = Math.min(...L.items.map((i) => i.x)); L.x2 = Math.max(...L.items.map((i) => i.x + i.w));
+    L.h = Math.max(...L.items.map((i) => i.h)); L.y1 = L.y - L.h * 0.28; L.y2 = L.y + L.h * 0.88;
+    let s = "", prev = null;
+    for (const i of L.items) { if (prev && i.x - (prev.x + prev.w) > i.h * 0.15 && !/\s$/.test(s) && !/^\s/.test(i.s)) s += " "; s += i.s; prev = i; }
+    L.text = s.replace(/\s+/g, " ").trim();
+    const side = sides.has(L.col) ? L.col : (sides.size ? [...sides][0] : -1);
+    let best = null, bd = 1e9;
+    for (const m of margin) if (m.side === side) { const d = Math.abs(m.y - L.y); if (d < bd) { bd = d; best = m; } }
+    L.ln = best && bd < Math.max(3.5, L.h * 0.7) ? best.n : null;
+    for (const it of L.items) pg.itemLine[it.i] = L;
+  }
+  pg.lines = lines;
+}
+
+function findLine(pg, px, py, slack) {
+  let best = null, bd = 1e9;
+  for (const L of pg.lines) {
+    if (px < L.x1 - 14 || px > L.x2 + 14) continue;
+    const dy = py < L.y1 ? L.y1 - py : py > L.y2 ? py - L.y2 : 0;
+    if (dy < bd) { bd = dy; best = L; }
+  }
+  return bd <= (slack == null ? 6 : slack) ? best : null;
+}
+function vpRect(pg, box) {
+  const [a, b, c, d] = pg.vp.convertToViewportRectangle(box);
+  return { x: Math.min(a, c), y: Math.min(b, d), w: Math.abs(c - a), h: Math.abs(d - b) };
+}
+function fracRect(pg, r) { return { x: r.x / pg.vp.width, y: r.y / pg.vp.height, w: r.w / pg.vp.width, h: r.h / pg.vp.height }; }
+
+/* ---------- zoom and pan (trackpad pinch inside the paper pane) ---------- */
+let liveZoom = 1, settleTimer = 0, gestureScale = 1;
+function zoomAt(cx, cy, f) {
+  if (!S.pages.length || $("#pages").classList.contains("hidden") || !isFinite(f) || f <= 0) return;
+  const stage = $("#stage"), pagesEl = $("#pages");
+  const target = Math.min(S.zoomMax, Math.max(S.zoomMin, S.scale * liveZoom * f));
+  const next = target / S.scale; if (Math.abs(next - liveZoom) < 1e-4) return;
+  const sr = stage.getBoundingClientRect(); const lx = cx - sr.left, ly = cy - sr.top;
+  const k = next / liveZoom;
+  const ox = stage.scrollLeft + lx, oy = stage.scrollTop + ly;
+  liveZoom = next; pagesEl.style.zoom = liveZoom;
+  focusEl.style.display = "none"; wordEl.style.display = "none";
+  stage.scrollLeft = ox * k - lx; stage.scrollTop = oy * k - ly;
+  clearTimeout(settleTimer); settleTimer = setTimeout(settleZoom, 220);
+}
+function settleZoom() {
+  if (Math.abs(liveZoom - 1) < 1e-4) return;
+  const stage = $("#stage"), pagesEl = $("#pages");
+  const sl = stage.scrollLeft, st = stage.scrollTop;
+  S.scale = S.scale * liveZoom; liveZoom = 1;
+  for (const pg of S.pages) {
+    pg.vp = pg.page.getViewport({ scale: S.scale });
+    pg.el.style.width = pg.vp.width + "px"; pg.el.style.height = pg.vp.height + "px";
+    const c = pg.el.querySelector("canvas"); c.style.width = pg.vp.width + "px"; c.style.height = pg.vp.height + "px";
+    if (pg.task) { try { pg.task.cancel(); } catch {} }
+    pg.gen = (pg.gen || 0) + 1; pg.tl.innerHTML = ""; pg.itemDiv = null;
+  }
+  pagesEl.style.zoom = ""; stage.scrollLeft = sl; stage.scrollTop = st;
+  S.hover = null;
+  const mid = st + stage.clientHeight / 2;
+  const order = [...S.pages].sort((a, b) => Math.abs(a.el.offsetTop + a.el.offsetHeight / 2 - mid) - Math.abs(b.el.offsetTop + b.el.offsetHeight / 2 - mid));
+  (async () => { for (const pg of order) await renderPage(pg); })();
+}
+$("#stage").addEventListener("wheel", (e) => {
+  if (!e.ctrlKey || !S.pages.length || $("#pages").classList.contains("hidden")) return;
+  e.preventDefault();
+  zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.01));
+}, { passive: false });
+$("#stage").addEventListener("gesturestart", (e) => { e.preventDefault(); gestureScale = 1; });
+$("#stage").addEventListener("gesturechange", (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, e.scale / gestureScale); gestureScale = e.scale; });
+$("#stage").addEventListener("gestureend", (e) => e.preventDefault());
+
+/* ---------- pointing ---------- */
+let moveEv = null, raf = 0, focusEl = el("div", "focus"), wordEl = el("div", "wordbox");
+$("#stage").addEventListener("mousemove", (e) => { moveEv = e; if (!raf) raf = requestAnimationFrame(onMove); });
+const WORDCH = /[\p{L}\p{N}]/u, INNER = /[\p{L}\p{N}.,\-–×%′’'_/]/u, ENDCH = /[\p{L}\p{N}×%′]/u;
+function caretAt(x, y) {
+  if (document.caretPositionFromPoint) { const p = document.caretPositionFromPoint(x, y); return p ? { node: p.offsetNode, off: p.offset } : null; }
+  if (document.caretRangeFromPoint) { const r = document.caretRangeFromPoint(x, y); return r ? { node: r.startContainer, off: r.startOffset } : null; }
+  return null;
+}
+function wordAt(x, y) {
+  const c = caretAt(x, y); if (!c || !c.node || c.node.nodeType !== 3) return null;
+  const span = c.node.parentElement; if (!span || !span.closest(".textLayer")) return null;
+  const br = span.getBoundingClientRect(); if (x < br.left - 2 || x > br.right + 2 || y < br.top - 2 || y > br.bottom + 2) return null;
+  const s = c.node.data; let a = Math.min(c.off, s.length);
+  if (!(a < s.length && INNER.test(s[a])) && a > 0 && INNER.test(s[a - 1])) a--;
+  if (!(a < s.length && INNER.test(s[a]))) return null;
+  let b = a;
+  while (a > 0 && INNER.test(s[a - 1])) a--;
+  while (b < s.length && INNER.test(s[b])) b++;
+  while (a < b && !WORDCH.test(s[a])) a++;
+  while (b > a && !ENDCH.test(s[b - 1])) b--;
+  if (a >= b) return null;
+  const r = document.createRange(); r.setStart(c.node, a); r.setEnd(c.node, b);
+  return { text: s.slice(a, b), rect: r.getBoundingClientRect() };
+}
+function onMove() {
+  raf = 0; const e = moveEv; if (!e) return;
+  const pe = e.target.closest && e.target.closest(".page"); if (!pe) return;
+  const pg = S.pages[+pe.dataset.n - 1]; if (!pg) return;
+  const r = pe.getBoundingClientRect(); if (!r.width) return;
+  const zf = pg.vp.width / r.width;
+  const [px, py] = pg.vp.convertToPdfPoint((e.clientX - r.left) * zf, (e.clientY - r.top) * zf);
+  const L = pg.lines.length ? findLine(pg, px, py) : null;
+  const w = wordAt(e.clientX, e.clientY);
+  const word = w ? { text: w.text, rect: { x: (w.rect.left - r.left) / r.width, y: (w.rect.top - r.top) / r.height, w: w.rect.width / r.width, h: w.rect.height / r.height } } : null;
+  setHover({ pg, L, word, fx: (e.clientX - r.left) / r.width, fy: (e.clientY - r.top) / r.height, px, py });
+}
+function hoverKey(h) { return h ? h.pg.num + ":" + (h.L ? h.pg.lines.indexOf(h.L) : "x" + Math.round(h.fx * 20) + "," + Math.round(h.fy * 20)) + ":" + (h.word ? h.word.text + Math.round(h.word.rect.x * 1000) : "") : ""; }
+function pushCand() {
+  const c = S.trailCand; if (!c) return;
+  const last = S.trail[S.trail.length - 1];
+  if (Date.now() - c.t >= 250 && (!last || last.key !== c.key)) { S.trail.push({ key: c.key, desc: describeHover(c.h) }); if (S.trail.length > 15) S.trail.shift(); }
+}
+function setHover(h) {
+  const k = hoverKey(h);
+  if (S.hover && hoverKey(S.hover) === k) return;
+  S.hover = h;
+  if (h.L) { const r = vpRect(h.pg, [h.L.x1, h.L.y1, h.L.x2, h.L.y2]); Object.assign(focusEl.style, { left: r.x - 6 + "px", top: r.y - 2 + "px", width: r.w + 10 + "px", height: r.h + 4 + "px", display: "" }); if (focusEl.parentNode !== h.pg.fl) h.pg.fl.append(focusEl); }
+  else focusEl.style.display = "none";
+  if (h.word) { const q = h.word.rect; Object.assign(wordEl.style, { left: q.x * 100 + "%", top: q.y * 100 + "%", width: q.w * 100 + "%", height: q.h * 100 + "%", display: "" }); if (wordEl.parentNode !== h.pg.fl) h.pg.fl.append(wordEl); }
+  else wordEl.style.display = "none";
+  if (S.utterOpen) { pushCand(); S.trailCand = { key: k, h, t: Date.now() }; }
+  if (!getSelectionAnchor()) showWhere(hoverAnchor(h));
+}
+document.addEventListener("selectionchange", () => { const a = getSelectionAnchor(); showWhere(a || hoverAnchor(S.hover)); });
+function showWhere(a) {
+  $("#whereLoc").textContent = a ? (a.page != null ? locText(a) : "") + (a.kind === "selection" ? " (selection)" : a.word ? (a.page != null ? ", on " : "On ") + "“" + a.word.text + "”" : "") : "Nothing yet.";
+  $("#whereLine").textContent = a ? (a.kind === "selection" ? a.quote : a.ref ? a.ref.L.text : a.desc || "") : "";
+}
+function markWord(h) {
+  const L = h.L, w = h.word.text, t = L.text; const idx = [];
+  let k = t.indexOf(w); while (k >= 0) { idx.push(k); k = t.indexOf(w, k + 1); }
+  if (!idx.length) return null;
+  const cx = h.pg.vp.convertToPdfPoint((h.word.rect.x + h.word.rect.w / 2) * h.pg.vp.width, 0)[0];
+  const ratio = (cx - L.x1) / Math.max(1, L.x2 - L.x1);
+  let best = idx[0], bd = 1e9; for (const i of idx) { const d = Math.abs((i + w.length / 2) / t.length - ratio); if (d < bd) { bd = d; best = i; } }
+  return t.slice(0, best) + "⟦" + w + "⟧" + t.slice(best + w.length);
+}
+function nearestText(h) {
+  let best = null, bd = 1e9, cap = null, cd = 1e9;
+  for (const L of h.pg.lines) {
+    const d = Math.abs((L.y1 + L.y2) / 2 - h.py) + 0.3 * Math.max(0, L.x1 - h.px, h.px - L.x2);
+    if (d < bd) { bd = d; best = L; }
+    if (/^(Figure|Fig\.|Table)\s*\d+/i.test(L.text) && Math.abs(L.y - h.py) < cd) { cd = Math.abs(L.y - h.py); cap = L; }
+  }
+  return (best ? "nearest line" + (best.ln != null ? " L" + best.ln : "") + ": “" + best.text + "”" : "no text nearby") + (cap && cap !== best ? "; nearest caption" + (cap.ln != null ? " L" + cap.ln : "") + ": “" + cap.text + "”" : "");
+}
+function describeHover(h) {
+  if (!h) return null;
+  const loc = "page " + h.pg.num + (h.L && h.L.ln != null ? ", line " + h.L.ln : "");
+  if (h.word && h.L) { const m = markWord(h); return m ? loc + ", on the word marked ⟦ ⟧: “" + m + "”" : loc + ", on the word “" + h.word.text + "” in: “" + h.L.text + "”"; }
+  if (h.word) return loc + ", on the word “" + h.word.text + "”";
+  if (h.L) return loc + ", on the line (between words): “" + h.L.text + "”";
+  return "page " + h.pg.num + ", " + Math.round(h.fx * 100) + "% across and " + Math.round(h.fy * 100) + "% down, not over text (a figure, table or margin); " + nearestText(h);
+}
+function hoverAnchor(h) {
+  if (!h) return null;
+  const rects = h.L ? [fracRect(h.pg, vpRect(h.pg, [h.L.x1, h.L.y1, h.L.x2, h.L.y2]))] : h.word ? [h.word.rect] : [{ x: Math.max(0, h.fx - 0.01), y: Math.max(0, h.fy - 0.008), w: 0.02, h: 0.016 }];
+  return { page: h.pg.num, line: h.L ? h.L.ln : null, quote: h.L ? h.L.text : h.word ? h.word.text : "", rects, kind: "cursor", ref: h.L ? { pg: h.pg, L: h.L } : null, word: h.word, desc: describeHover(h) };
+}
+function getSelectionAnchor() {
+  const s = window.getSelection(); if (!s || s.isCollapsed || !s.rangeCount) return null;
+  const text = s.toString().replace(/\s+/g, " ").trim(); if (text.length < 2) return null;
+  const range = s.getRangeAt(0);
+  const node = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
+  const pe = node && node.closest && node.closest(".page"); if (!pe) return null;
+  const pg = S.pages[+pe.dataset.n - 1]; const pr = pe.getBoundingClientRect();
+  let rects = [...range.getClientRects()].filter((r) => r.width > 1 && r.height > 1 && r.top >= pr.top - 2 && r.bottom <= pr.bottom + 2)
+    .map((r) => ({ x: (r.left - pr.left) / pr.width, y: (r.top - pr.top) / pr.height, w: r.width / pr.width, h: r.height / pr.height }));
+  rects = mergeRects(rects); if (!rects.length) return null;
+  const r0 = rects[0];
+  const [px, py] = pg.vp.convertToPdfPoint((r0.x + r0.w / 2) * pg.vp.width, (r0.y + r0.h / 2) * pg.vp.height);
+  const L = findLine(pg, px, py, 10);
+  return { page: pg.num, line: L ? L.ln : null, quote: text.slice(0, 700), rects, kind: "selection", ref: L ? { pg, L } : null };
+}
+function mergeRects(rs) {
+  rs.sort((a, b) => a.y - b.y || a.x - b.x);
+  const out = [];
+  for (const r of rs) {
+    const o = out[out.length - 1];
+    if (o && Math.abs(o.y - r.y) < o.h * 0.5 && r.x <= o.x + o.w + 0.01) { const x2 = Math.max(o.x + o.w, r.x + r.w); o.y = Math.min(o.y, r.y); o.h = Math.max(o.h, r.h); o.w = x2 - o.x; }
+    else out.push({ ...r });
+  }
+  return out.slice(0, 40);
+}
+function snapshotPointer() {
+  pushCand();
+  const sel = getSelectionAnchor() || S.startSel; const st = S.startHover, en = S.hover;
+  const ctxA = sel && sel.ref ? sel : hoverAnchor(en && en.L ? en : st);
+  return {
+    anchor: sel || hoverAnchor(st) || hoverAnchor(en),
+    pointer: { start: describeHover(st), end: describeHover(en), trail: S.trail.map((t) => t.desc), sel: sel ? { loc: locText(sel), text: sel.quote } : null, context: ctxA && ctxA.ref ? around(ctxA, 3) : "" },
+  };
+}
+function pointerText(p) {
+  if (!p) return "(nothing)";
+  const out = [];
+  out.push("Selected text: " + (p.sel ? p.sel.loc + ": “" + p.sel.text + "”" : "(none)"));
+  out.push("Cursor when he started speaking: " + (p.start || "(not over the paper)"));
+  out.push("Cursor when he finished: " + (p.end || "(not over the paper)"));
+  out.push("Where the cursor rested while he spoke, in order:" + (p.trail.length ? "\n" + p.trail.map((t) => "- " + t).join("\n") : " (didn't move)"));
+  if (p.context) out.push("Lines around that spot (>> marks the line):\n" + p.context);
+  return out.join("\n");
+}
+function around(a, k) {
+  if (!a || !a.ref) return a ? a.quote : "";
+  const { pg, L } = a.ref; const same = pg.lines.filter((x) => x.col === L.col); const i = same.indexOf(L);
+  return same.slice(Math.max(0, i - k), i + k + 1).map((x) => (x === L ? ">> " : "   ") + (x.ln != null ? "L" + x.ln + ": " : "") + x.text).join("\n");
+}
+let paperCache = null;
+function paperText() {
+  if (paperCache) return paperCache;
+  let out = "";
+  for (const pg of S.pages) { out += "\n[Page " + pg.num + "]\n"; for (const L of pg.lines) out += (L.ln != null ? "L" + L.ln + ": " : "") + L.text + "\n"; }
+  paperCache = out.slice(0, 170000);
+  return paperCache;
+}
+
+/* ---------- anchoring by quoted text ---------- */
+const isWordChar = (ch) => /[\p{L}\p{N}]/u.test(ch);
+function normQ(q) { let s = ""; for (const ch of String(q).normalize("NFKC").toLowerCase()) if (isWordChar(ch)) s += ch; return s; }
+function pageIndex(pg) {
+  if (pg.hay) return pg.hay;
+  let s = ""; const map = [];
+  pg.tc.items.forEach((it, i) => {
+    if (!it.str || pg.marginItems.has(i)) return;
+    for (let j = 0; j < it.str.length; ) {
+      const src = String.fromCodePoint(it.str.codePointAt(j));
+      for (const ch of src.normalize("NFKC").toLowerCase()) if (isWordChar(ch)) { s += ch; for (let u = 0; u < ch.length; u++) map.push([i, j, src.length]); }
+      j += src.length;
+    }
+  });
+  return (pg.hay = { s, map });
+}
+function findQuote(pg, q, partial) {
+  const n = normQ(q); if (n.length < 2) return [];
+  const { s, map } = pageIndex(pg);
+  const scan = (needle) => { const out = []; let k = s.indexOf(needle); while (k >= 0 && out.length < 30) { out.push({ start: map[k], end: map[k + needle.length - 1] }); k = s.indexOf(needle, k + 1); } return out; };
+  if (!partial) return scan(n);
+  for (let len = n.length - 3; len >= Math.max(12, Math.floor(n.length * 0.5)); len -= 3) { const r = scan(n.slice(0, len)); if (r.length) return r; }
+  return [];
+}
+function spanRects(pg, a, b) {
+  const pr = pg.el.getBoundingClientRect(); const out = [];
+  const da = pg.itemDiv && pg.itemDiv.get(a[0]), dz = pg.itemDiv && pg.itemDiv.get(b[0]);
+  if (da && dz && da.firstChild && dz.firstChild && pr.width) {
+    try {
+      const r = document.createRange();
+      r.setStart(da.firstChild, Math.min(a[1], da.firstChild.length));
+      r.setEnd(dz.firstChild, Math.min(b[1] + (b[2] || 1), dz.firstChild.length));
+      for (const c of r.getClientRects()) {
+        if (c.width < 1 || c.height < 1) continue;
+        const x = (c.left - pr.left) / pr.width, w = c.width / pr.width;
+        if (x + w < 0.095 || x > 0.905) continue;
+        out.push({ x, y: (c.top - pr.top) / pr.height, w, h: c.height / pr.height });
+      }
+      if (out.length) return mergeRects(out);
+    } catch (e) { /* fall back to geometry */ }
+  }
+  for (let i = a[0]; i <= b[0]; i++) {
+    const it = pg.tc.items[i]; if (!it || !it.str || pg.marginItems.has(i)) continue;
+    const t = it.transform, len = it.str.length, w = it.width || 0, h = Math.hypot(t[2], t[3]) || 8;
+    const j1 = i === a[0] ? a[1] : 0, j2 = i === b[0] ? b[1] + (b[2] || 1) : len;
+    out.push(fracRect(pg, vpRect(pg, [t[4] + (w * j1) / len, t[5] - h * 0.28, t[4] + (w * j2) / len, t[5] + h * 0.88])));
+  }
+  return mergeRects(out);
+}
+function anchorByQuote(quote, page, near) {
+  if (!quote || !S.pages.length) return null;
+  const order = []; const p0 = page && S.pages[page - 1]; if (p0) order.push(p0);
+  const ref = (near && near.page) || page || 1;
+  order.push(...S.pages.filter((p) => p !== p0).sort((x, y) => Math.abs(x.num - ref) - Math.abs(y.num - ref)));
+  for (const partial of [false, true]) {
+    for (const pg of order) {
+      if (!pg.tc) continue;
+      const ms = findQuote(pg, quote, partial); if (!ms.length) continue;
+      let m = ms[0];
+      if (ms.length > 1 && near && near.page === pg.num && near.rects && near.rects[0]) {
+        let bd = 1e9;
+        for (const x of ms) { const r = spanRects(pg, x.start, x.end)[0]; if (!r) continue; const dd = Math.abs(r.y - near.rects[0].y) + 0.3 * Math.abs(r.x - near.rects[0].x); if (dd < bd) { bd = dd; m = x; } }
+      }
+      const rects = spanRects(pg, m.start, m.end); if (!rects.length) continue;
+      const L = pg.itemLine[m.start[0]];
+      return { page: pg.num, line: L ? L.ln : null, quote: String(quote).replace(/\s+/g, " ").trim().slice(0, 700), rects, kind: "quote", partial };
+    }
+  }
+  return null;
+}
+
+/* ---------- highlights & comments ---------- */
+function sortedComments() {
+  return [...S.comments].sort((a, b) => (a.page ?? 1e9) - (b.page ?? 1e9) || ((a.rects && a.rects[0] ? a.rects[0].x > 0.5 : 0) - (b.rects && b.rects[0] ? b.rects[0].x > 0.5 : 0)) || ((a.rects && a.rects[0] ? a.rects[0].y : 0) - (b.rects && b.rects[0] ? b.rects[0].y : 0)) || (a.createdAt || 0) - (b.createdAt || 0));
+}
+function renderHighlights() {
+  for (const pg of S.pages) pg.hl.innerHTML = "";
+  for (const c of S.comments) {
+    const pg = c.page != null && S.pages[c.page - 1]; if (!pg || !Array.isArray(c.rects)) continue;
+    for (const r of c.rects) {
+      const d = el("div", "hl" + (c.id === S.activeId ? " active" : ""));
+      d.dataset.id = c.id; d.title = c.text || "";
+      d.style.left = r.x * 100 + "%"; d.style.top = r.y * 100 + "%"; d.style.width = r.w * 100 + "%"; d.style.height = r.h * 100 + "%";
+      d.addEventListener("click", () => activate(c.id, "card"));
+      pg.hl.append(d);
+    }
+  }
+}
+function renderComments() {
+  const list = $("#commentList"); list.innerHTML = "";
+  const cs = sortedComments();
+  $("#ccount").textContent = cs.length ? "(" + cs.length + ")" : "";
+  if (!cs.length) { list.append(el("div", "none", S.canEdit ? "No comments yet. Point at a passage and say what you think." : "No comments yet.")); return; }
+  for (const c of cs) {
+    const card = el("div", "card" + (c.id === S.activeId ? " active" : "")); card.dataset.id = c.id;
+    const meta = el("div", "meta"); meta.append(el("span", "", (c.n ? "#" + c.n + "  " : "") + locText(c)));
+    if (S.canEdit) { const del = el("button", "linkbtn", "Delete"); del.addEventListener("click", (e) => { e.stopPropagation(); removeComment(c.id); }); meta.append(del); }
+    card.append(meta);
+    if (c.quote) card.append(el("div", "quote", c.quote));
+    const t = el("div", "ctext", c.text || "");
+    if (S.canEdit) {
+      t.contentEditable = "true"; t.spellcheck = true;
+      t.addEventListener("click", (e) => e.stopPropagation());
+      t.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); t.blur(); } });
+      t.addEventListener("blur", () => { const v = t.textContent.trim(); if (v && v !== c.text) editComment(c.id, v); else if (!v) t.textContent = c.text; });
+    }
+    card.append(t);
+    card.addEventListener("click", () => activate(c.id, "page"));
+    list.append(card);
+  }
+}
+function activate(id, scrollTo) {
+  S.activeId = id;
+  document.querySelectorAll(".hl").forEach((h) => h.classList.toggle("active", h.dataset.id === id));
+  document.querySelectorAll(".card").forEach((c) => c.classList.toggle("active", c.dataset.id === id));
+  if (scrollTo === "page") { const h = document.querySelector('.hl[data-id="' + id + '"]'); if (h) h.scrollIntoView({ block: "center", behavior: "smooth" }); }
+  if (scrollTo === "card") { setSeg("comments"); const c = document.querySelector('.card[data-id="' + id + '"]'); if (c) { c.scrollIntoView({ block: "nearest", behavior: "smooth" }); c.classList.remove("flash"); void c.offsetWidth; c.classList.add("flash"); } }
+}
+
+/* ---------- storage (db when available, memory otherwise) ---------- */
+function numberLegacy() {
+  const missing = S.comments.filter((c) => !c.n).sort((x, y) => (x.createdAt || 0) - (y.createdAt || 0));
+  if (!missing.length) return;
+  let next = S.comments.reduce((m, x) => Math.max(m, x.n || 0), 0);
+  for (const c of missing) {
+    c.n = ++next;
+    if (db && S.canEdit) db.collection("comments").doc(c.id).update({ n: c.n }).catch(() => {});
+  }
+}
+async function addComment(a, text) {
+  const id = db ? db.collection("comments").doc().id : newId();
+  const n = S.comments.reduce((m, x) => Math.max(m, x.n || 0), 0) + 1;
+  const c = { n, page: a ? a.page : null, line: a && a.line != null ? a.line : null, quote: a ? a.quote : "", rects: a && a.rects ? [...a.rects] : [], text, createdAt: Date.now() };
+  S.comments = S.comments.filter((x) => x.id !== id).concat([{ id, ...c }]);
+  renderComments(); renderHighlights(); activate(id, "card");
+  if (db) await db.collection("comments").doc(id).set(c).catch((e) => status("The comment wasn’t saved: " + (e.message || e.code), true));
+  return { id, n };
+}
+async function patchComment(id, patch) {
+  const c = S.comments.find((x) => x.id === id); if (!c || !patch || !Object.keys(patch).length) return;
+  Object.assign(c, patch); renderComments(); renderHighlights(); activate(id, "card");
+  if (db) await db.collection("comments").doc(id).update({ ...patch, editedAt: Date.now() }).catch((e) => status("The change wasn’t saved: " + (e.message || e.code), true));
+}
+function editComment(id, text) { return patchComment(id, { text }); }
+async function removeComment(id) {
+  S.comments = S.comments.filter((x) => x.id !== id); renderComments(); renderHighlights();
+  if (db) await db.collection("comments").doc(id).delete().catch((e) => status("The comment wasn’t deleted: " + (e.message || e.code), true));
+}
+let summaryWrite = Promise.resolve();
+function saveSummary(md) {
+  S.summary = md;
+  if (db) summaryWrite = summaryWrite.then(() => db.doc("review/summary").set({ markdown: md, updatedAt: Date.now() })).catch((e) => status("The summary wasn’t saved: " + (e.message || e.code), true));
+}
+let chatWrite = Promise.resolve(), chatTimer = 0;
+function addTurn(role, text, tab, loc, fail) {
+  S.turns.push({ role, text, tab, loc: loc || "", at: Date.now(), ...(fail ? { fail: true } : {}) });
+  if (S.turns.length > 120) S.turns = S.turns.slice(-120);
+  renderChat();
+  if (db && S.uid) { clearTimeout(chatTimer); chatTimer = setTimeout(() => { const turns = S.turns.slice(); chatWrite = chatWrite.then(() => db.doc("data/users/" + S.uid + "/chat").set({ turns })).catch(() => {}); }, 800); }
+}
+function renderChat() {
+  const list = $("#chatList"); list.innerHTML = "";
+  if (!S.turns.length) { list.append(el("div", "none", "What you say and Claude’s answers appear here.")); return; }
+  for (const t of S.turns) {
+    const d = el("div", "turn " + (t.role === "user" ? "you" : t.role === "log" ? "log" + (t.fail ? " fail" : "") : "claude"));
+    if (t.role === "log") d.append(el("div", "body", t.text));
+    else d.append(el("div", "who", (t.role === "user" ? "You" : "Claude") + (t.loc ? ", " + t.loc : "")), el("div", "body", t.text));
+    list.append(d);
+  }
+  list.scrollTop = list.scrollHeight;
+}
+
+/* ---------- voice ---------- */
+let sendTimer = 0;
+function markStart() { if (!S.buffer && !S.utterOpen) { S.utterOpen = true; S.trail = []; S.startHover = S.hover; S.startSel = getSelectionAnchor(); S.trailCand = S.hover ? { key: hoverKey(S.hover), h: S.hover, t: Date.now() } : null; } }
+function armTimer() {
+  clearTimeout(sendTimer);
+  const bar = $("#drainBar"); bar.classList.remove("run"); void bar.offsetWidth;
+  if (!S.buffer.trim() && !S.partial) return;
+  bar.style.setProperty("--wait", S.waitMs / 1000 + "s"); bar.classList.add("run");
+  sendTimer = setTimeout(() => {
+    if (S.partial) { S.flushedPartial = S.partial; S.buffer += (S.buffer.trim() ? " " : "") + S.partial; S.partial = ""; }
+    flush();
+  }, S.waitMs);
+}
+function renderHeard() {
+  const box = $("#heardBox"), t = $("#heardText");
+  const has = S.buffer.trim() || S.partial;
+  box.classList.toggle("hidden", !has);
+  t.textContent = S.buffer.trim();
+  if (S.partial) { const p = el("span", "partial", (S.buffer.trim() ? " " : "") + S.partial); t.append(p); }
+}
+function flush() {
+  clearTimeout(sendTimer);
+  const text = S.buffer.trim(); if (!text) return;
+  let snap;
+  try { snap = snapshotPointer(); }
+  catch (e) { console.error(e); status("Cursor tracking failed (" + ((e && e.message) || e) + "), so this was sent without it.", true); snap = { anchor: null, pointer: null }; }
+  S.buffer = ""; S.startHover = null; S.startSel = null; S.utterOpen = false; S.trail = []; S.trailCand = null; renderHeard();
+  enqueue(text, snap);
+}
+function setMicState(st) {
+  const b = $("#micBtn"); b.dataset.state = st; S.listening = st === "listening" || st === "starting";
+  b.setAttribute("aria-pressed", S.listening ? "true" : "false");
+  $("#micLabel").textContent = st === "listening" ? "Listening" : st === "starting" ? "Starting…" : st === "finishing" ? "Finishing…" : "Start talking";
+}
+function wireDictation() {
+  if (!dictation) { $("#voiceBox").innerHTML = '<span style="font-size:13px;color:var(--muted)">Voice works in Chrome or the Claude desktop app. Type below instead.</span>'; return; }
+  dictation.onState(({ state, reason }) => {
+    setMicState(state);
+    if (state === "idle" && reason) {
+      const why = { hidden: "Listening stopped because the tab was hidden. Click Start talking to resume.", time_limit: "Listening stops after 60 minutes. Click Start talking to resume.", not_granted: "The microphone is blocked for this page. Allow it from the page’s Permissions menu.", unavailable: "Voice isn’t available for this account.", rate_limited: "Voice is busy. Try again in a moment.", upstream_error: "The microphone or the speech service failed. Click Start talking to try again." }[reason];
+      if (why) status(why, reason !== "hidden" && reason !== "time_limit");
+      if (S.buffer.trim()) armTimer();
+    }
+  });
+  dictation.onPartial(({ text }) => { if (text) markStart(); S.partial = text; renderHeard(); armTimer(); });
+  dictation.onFinal(({ text }) => {
+    if (S.flushedPartial && text.trim().toLowerCase() === S.flushedPartial.trim().toLowerCase()) { S.flushedPartial = ""; S.partial = ""; renderHeard(); return; }
+    S.flushedPartial = ""; markStart(); S.buffer += text; S.partial = ""; renderHeard(); armTimer();
+  });
+}
+$("#micBtn").addEventListener("click", () => {
+  if (!dictation) return;
+  if (dictation.active()) { dictation.stop().catch(() => {}); return; }
+  status("");
+  dictation.start().catch((e) => {
+    const m = { not_granted: "The microphone isn’t allowed for this page. Allow it from the page’s Permissions menu.", dismissed: "", unavailable: "Voice isn’t available here.", rate_limited: "Voice is busy. Try again in a moment.", stopped: "" }[e.code];
+    if (m !== "") status(m || "Voice didn’t start (" + e.code + ").", true);
+  });
+});
+$("#sendNow").addEventListener("click", () => { S.buffer += S.partial ? " " + S.partial : ""; S.partial = ""; flush(); });
+$("#discard").addEventListener("click", () => { clearTimeout(sendTimer); S.buffer = ""; S.partial = ""; S.startHover = null; S.startSel = null; S.utterOpen = false; S.trail = []; S.trailCand = null; renderHeard(); });
+$("#waitSel").addEventListener("change", (e) => { S.waitMs = +e.target.value; store("review.wait", String(S.waitMs)); });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && (S.buffer || S.partial)) $("#discard").click();
+});
+$("#typeBox").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#typeSend").click(); } });
+$("#typeSend").addEventListener("click", () => { const v = $("#typeBox").value.trim(); if (!v) return; $("#typeBox").value = ""; S.trail = []; S.trailCand = null; enqueue(v, snapshotPointer()); });
+
+/* ---------- Claude ---------- */
+function enqueue(text, snap) { S.queue.push({ text, anchor: snap.anchor, pointer: snap.pointer, tab: S.tab }); pump(); }
+async function pump() {
+  if (S.busy) return;
+  const item = S.queue.shift(); if (!item) return;
+  S.busy = true;
+  try { await turn(item); }
+  catch (e) { console.error(e); showReply(""); status("Handling that failed: " + ((e && (e.message || e.code)) || e), true); }
+  finally { S.busy = false; $("#stopBtn").classList.add("hidden"); if (S.queue.length) pump(); }
+}
+function showReply(text, thinking) {
+  const b = $("#replyBox"); b.classList.toggle("hidden", !text); b.classList.toggle("thinking", !!thinking); $("#replyText").textContent = text || "";
+}
+$("#stopBtn").addEventListener("click", () => { if (S.ctl) S.ctl.abort(); });
+function modelOpts(effort) {
+  const t = S.model;
+  if (t === "quick") return { modelTier: "quick" };
+  return { modelTier: t, effort: effort || "low" };
+}
+function commentDigest() {
+  const cs = sortedComments();
+  const newest = [...cs].sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0))[0];
+  S.digest = cs;
+  const text = cs.length ? cs.map((c) => "#" + c.n + (c === newest ? " (newest)" : "") + " [" + locText(c) + "] on “" + (c.quote || "").slice(0, 220) + "”: " + c.text).join("\n") : "(none yet)";
+  return { list: cs, text };
+}
+function resolveId(ref) {
+  const r = String(ref == null ? "" : ref).trim();
+  if (S.comments.some((c) => c.id === r)) return r;
+  if (/^(newest|last|latest|that)$/i.test(r)) { const newest = [...S.comments].sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0))[0]; return newest ? newest.id : null; }
+  const m = /^(?:#|c|comment\s*#?\s*)?(\d+)$/i.exec(r);
+  if (m) { const c = S.comments.find((x) => x.n === +m[1]); return c ? c.id : null; }
+  return null;
+}
+function recentTalk(n) {
+  return S.turns.slice(-n).map((t) => (t.role === "user" ? "Professor" : t.role === "log" ? "[Done]" : "Claude") + ": " + t.text).join("\n") || "(none)";
+}
+
+const RULES = `You are working with a professor who is reviewing his PhD student's paper draft by talking while he reads. His speech is transcribed automatically: expect transcription errors (technical names heard as common words, such as "silkworm" for "Cilkworm"), filler and false starts. Each turn gives what he said, which tab he is on, and where he was pointing: any text he selected, the exact word under his mouse cursor (marked ⟦ ⟧ in its line) when he started and when he finished speaking, and the words his cursor rested on while he spoke. Selected text is the strongest signal of what he means, then the words his cursor rested on while he talked. When the cursor is over a figure or table, you get its position on the page and the nearest caption.
+
+You act through operations:
+- {"op":"add","text":"...","page":3,"quote":"..."} records a comment for the student.
+- {"op":"edit","id":"#3","text":"...","page":3,"quote":"..."} changes a comment's wording, its anchor, or both; leave out what doesn't change.
+- {"op":"delete","id":"#3"}
+- {"op":"replace_summary","markdown":"..."} replaces the whole review summary.
+For a comment about the paper as a whole, give "general": true instead of page and quote.
+
+Anchoring. "quote" is the exact passage the comment is about, copied verbatim from PAPER TEXT (it may span lines but not pages; leave out the "L123:" prefixes). Choose its extent from what he says: a single word or number, a phrase, a sentence, a paragraph, a list item, a table row, or a figure caption for a comment on a figure. His pointing tells you where he is looking, not how much to anchor, so never default to the whole line. "page" is the page the quote is on.
+
+Comment text. His feedback, written to the student in his words and first-person voice. Remove filler and false starts and fix transcription errors using the paper's terms. Do not add points, soften, expand or summarize. If one utterance holds several distinct comments on different passages, add each one separately.
+
+Ids. Each comment has a fixed number ("#7") that never changes; use it as "id". He may refer to comments by number ("comment 7"), by content, or by where they are. "That" or "the last one" means the one marked newest. The [Done] lines in RECENT CONVERSATION record exactly which comments each turn added, edited or deleted. Only claim in "reply" what your operations do.
+
+reply. What he sees. After operations: a few words at most ("Noted.", "Moved it.", "Split into two."). For a question: answer in at most three sentences, precise and plain, citing lines like L482. For talk not meant for you: "" and no operations.
+
+Summary. When he asks to change the summary, send replace_summary with the whole revised text, changing only what he asked, in his voice: direct, technically precise, not promotional, and no criticism or praise he did not make.
+
+Reply with only JSON: {"ops":[...],"reply":"..."}`;
+
+async function turn(item) {
+  const a = item.anchor; const dig = commentDigest();
+  addTurn("user", item.text, item.tab, item.tab === "review" ? locText(a) : "");
+  if (!sample) { if (item.tab === "review") await addComment(a, item.text); status("Claude isn’t available here, so what you said was saved as written."); return; }
+  const prompt = `${RULES}
+
+PAPER TEXT (line numbers from the PDF margin; page markers in brackets):
+${paperText()}
+
+EXISTING COMMENTS, in reading order:
+${dig.text}
+
+CURRENT SUMMARY:
+${S.summary || "(none yet)"}
+
+RECENT CONVERSATION:
+${recentTalk(24)}
+
+HE IS ON THE ${item.tab === "summary" ? "SUMMARY" : "PAPER"} TAB.
+WHERE HE WAS POINTING:
+${pointerText(item.pointer)}
+
+HE SAID: “${item.text}”
+
+Reply with only the JSON object.`;
+  showReply("Thinking…", true); $("#stopBtn").classList.remove("hidden");
+  S.ctl = new AbortController();
+  let out;
+  try { out = await sample.json(prompt, { ...modelOpts(), cache: false, signal: S.ctl.signal }); }
+  catch (e) { const m = sampleErr(e); showReply(""); if (m) status(m, true); return; }
+  const ops = Array.isArray(out && out.ops) ? out.ops : [];
+  const res = await applyOps(ops, item);
+  const reply = String((out && out.reply) || "").trim();
+  if (reply) addTurn("assistant", reply, item.tab);
+  if (res.done.length) addTurn("log", res.done.join(" "), item.tab);
+  if (res.failed.length) addTurn("log", res.failed.join(" "), item.tab, "", true);
+  showReply([reply, res.failed.join(" ")].filter(Boolean).join("\n"));
+  status(res.failed.join(" "), !!res.failed.length);
+}
+
+async function applyOps(ops, item) {
+  const done = [], failed = [];
+  const KIND = { add: "add", create: "add", new: "add", comment: "add", edit: "edit", update: "edit", modify: "edit", change: "edit", replace: "edit", move: "edit", reanchor: "edit", delete: "delete", remove: "delete", replace_summary: "summary", summary: "summary", update_summary: "summary", set_summary: "summary" };
+  const label = (c) => "#" + c.n + " (" + locText(c) + ")";
+  for (const op of ops) {
+    if (!op || typeof op !== "object") continue;
+    const kind = KIND[String(op.op || op.action || op.type || "").toLowerCase().trim()];
+    const text = String(op.text ?? op.comment ?? op.new_text ?? op.body ?? "").trim();
+    const quote = op.quote ?? op.anchor ?? op.passage;
+    const ref = op.id ?? op.comment_id ?? op.n ?? op.number;
+    const place = () => {
+      if (op.general) return { a: null };
+      if (quote) { const a = anchorByQuote(quote, +op.page || null, item.anchor); return a ? { a } : { miss: true }; }
+      return {};
+    };
+    if (kind === "add") {
+      if (!text) { failed.push("Couldn’t add a comment: no text."); continue; }
+      const p = place(); let a = p.a;
+      if (a === undefined) a = item.anchor || null;
+      const r = await addComment(a, text);
+      done.push("Added #" + r.n + " (" + locText(a) + ")" + (p.miss ? ", on the passage you were pointing at, because “" + String(quote).slice(0, 50) + "” wasn’t found" : "") + ".");
+    } else if (kind === "edit") {
+      const id = resolveId(ref); const c = id && S.comments.find((x) => x.id === id);
+      if (!c) { failed.push("Couldn’t edit: there’s no comment " + (ref == null ? "(none named)" : String(ref)) + "."); continue; }
+      const patch = {}; const what = [];
+      if (text && text !== c.text) { patch.text = text; what.push("reworded"); }
+      if (op.general) { Object.assign(patch, { page: null, line: null, quote: "", rects: [] }); what.push("made general"); }
+      else if (quote) {
+        const p = place();
+        if (p.a) { Object.assign(patch, { page: p.a.page, line: p.a.line, quote: p.a.quote, rects: p.a.rects }); what.push("moved to " + locText(p.a)); }
+        else failed.push("Couldn’t move " + label(c) + ": “" + String(quote).slice(0, 50) + "” wasn’t found.");
+      }
+      if (!Object.keys(patch).length) { if (!quote) failed.push("Edit of " + label(c) + " changed nothing (no new text or passage)."); continue; }
+      await patchComment(id, patch);
+      done.push("Edited " + label(c) + ": " + what.join(", ") + ".");
+    } else if (kind === "delete") {
+      const id = resolveId(ref); const c = id && S.comments.find((x) => x.id === id);
+      if (!c) { failed.push("Couldn’t delete: there’s no comment " + (ref == null ? "(none named)" : String(ref)) + "."); continue; }
+      const lab = label(c); await removeComment(id); done.push("Deleted " + lab + ".");
+    } else if (kind === "summary") {
+      const md = String(op.markdown ?? op.text ?? "").trim();
+      if (!md) { failed.push("Couldn’t update the summary: no text."); continue; }
+      saveSummary(md); if (S.tab === "summary" && !S.summaryEditing) renderSummary(); done.push("Updated the summary.");
+    } else failed.push("Ignored an unknown operation “" + String(op.op || op.action || "?") + "”.");
+  }
+  return { done, failed };
+}
+
+const SUMMARY_RULES = `Write the review summary a professor will send to his PhD student, built only from his comments below on the student's paper draft.
+Start with "# Review: " and the paper title, then two or three sentences of overall assessment drawn only from the comments.
+Then group the comments under these headings, leaving out any heading with nothing under it:
+## Main concerns (problems with the claims, contribution or evaluation)
+## Section by section (issues tied to one section; name the section)
+## Minor fixes (wording, typos, formatting)
+Each item: one or two sentences in a bulleted list. Merge duplicates. Cite line numbers like (L482) where a comment has one.
+Write in his voice, first person, addressed to the student: direct, technically precise, not promotional. Do not add criticism or praise he did not make.
+Output Markdown only.`;
+
+async function generateSummary() {
+  if (!sample) { status("Claude isn’t available here.", true); return; }
+  const dig = commentDigest(); if (!dig.list.length) { status("Add some comments first.", true); return; }
+  const prompt = `${SUMMARY_RULES}
+
+PAPER TITLE: ${S.title}
+
+PAPER TEXT, for section names and context only:
+${paperText()}
+
+HIS COMMENTS, in reading order:
+${dig.text}`;
+  S.summaryEditing = false;
+  renderSummary("Writing the summary…", true);
+  $("#stopBtn").classList.remove("hidden"); showReply("Writing the summary from " + dig.list.length + " comments…", true);
+  S.ctl = new AbortController(); S.busy = true;
+  try {
+    const { text } = await sample(prompt, { ...modelOpts("medium"), cache: false, signal: S.ctl.signal, onText: ({ text }) => renderSummary(text, true) });
+    saveSummary(text.trim()); renderSummary(); showReply("Summary written. Talk to me here to change it."); addTurn("assistant", "Wrote the summary from " + dig.list.length + " comments.", "summary");
+  } catch (e) { const m = sampleErr(e); renderSummary(); showReply(""); if (m) status(m, true); }
+  finally { S.busy = false; $("#stopBtn").classList.add("hidden"); if (S.queue.length) pump(); }
+}
+
+/* ---------- summary view ---------- */
+function mdToHtml(md) {
+  const inline = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+  const lines = md.replace(/\r/g, "").split("\n"); let html = "", list = null, para = [];
+  const endPara = () => { if (para.length) { html += "<p>" + inline(para.join(" ")) + "</p>"; para = []; } };
+  const endList = () => { if (list) { html += "</" + list + ">"; list = null; } };
+  for (const raw of lines) {
+    const line = raw.trimEnd(); let m;
+    if (!line.trim()) { endPara(); endList(); continue; }
+    if ((m = /^(#{1,3})\s+(.*)$/.exec(line))) { endPara(); endList(); const n = m[1].length; html += "<h" + n + ">" + inline(m[2]) + "</h" + n + ">"; continue; }
+    if ((m = /^\s*[-*]\s+(.*)$/.exec(line))) { endPara(); if (list !== "ul") { endList(); html += "<ul>"; list = "ul"; } html += "<li>" + inline(m[1]) + "</li>"; continue; }
+    if ((m = /^\s*\d+[.)]\s+(.*)$/.exec(line))) { endPara(); if (list !== "ol") { endList(); html += "<ol>"; list = "ol"; } html += "<li>" + inline(m[1]) + "</li>"; continue; }
+    endList(); para.push(line.trim());
+  }
+  endPara(); endList(); return html;
+}
+function renderSummary(streamText, streaming) {
+  const v = $("#summaryView"); v.innerHTML = "";
+  const tools = el("div", "sumtools");
+  if (S.canEdit && !streaming) {
+    const n = S.comments.length;
+    const gen = el("button", "btn" + (S.summary ? "" : " primary"), S.summary ? "Rewrite from comments" : "Write summary from " + n + " comment" + (n === 1 ? "" : "s"));
+    gen.disabled = !n || S.busy; gen.addEventListener("click", () => {
+      if (!S.summary || gen.dataset.armed) { generateSummary(); return; }
+      gen.dataset.armed = "1"; gen.textContent = "Click again to replace the summary"; gen.style.color = "var(--danger)";
+      setTimeout(() => { if (gen.isConnected) { delete gen.dataset.armed; gen.textContent = "Rewrite from comments"; gen.style.color = ""; } }, 4000);
+    });
+    tools.append(gen);
+    if (S.summary) {
+      const ed = el("button", "btn", S.summaryEditing ? "Save text" : "Edit text");
+      ed.addEventListener("click", () => { if (S.summaryEditing) { saveSummary($("#sumEdit").value.trim()); S.summaryEditing = false; } else S.summaryEditing = true; renderSummary(); });
+      tools.append(ed);
+      if (S.summaryEditing) { const cancel = el("button", "linkbtn", "Cancel"); cancel.addEventListener("click", () => { S.summaryEditing = false; renderSummary(); }); tools.append(cancel); }
+    }
+    v.append(tools);
+  }
+  if (streaming) { const d = el("div"); d.innerHTML = mdToHtml(streamText || "") || '<p class="placeholder">' + esc(streamText || "") + "</p>"; v.append(d); return; }
+  if (S.summaryEditing) { const ta = el("textarea", "sumedit"); ta.id = "sumEdit"; ta.value = S.summary; v.append(ta); ta.focus(); return; }
+  if (!S.summary) { v.append(el("p", "placeholder", S.canEdit ? "No summary yet. Write it from your comments, then talk to me here to change it." : "No summary yet.")); return; }
+  const d = el("div"); d.innerHTML = mdToHtml(S.summary); v.append(d);
+}
+
+/* ---------- layout ---------- */
+function showOnly(which) {
+  $("#emptyBox").classList.toggle("hidden", which !== "empty");
+  $("#waitBox").classList.toggle("hidden", which !== "wait");
+  $("#pages").classList.toggle("hidden", which !== "pages");
+  $("#summaryView").classList.toggle("hidden", which !== "summary");
+}
+function setTab(t) {
+  S.tab = t === "summary" ? "summary" : "review";
+  $("#tabReview").setAttribute("aria-current", S.tab === "review" ? "page" : "false");
+  $("#tabSummary").setAttribute("aria-current", S.tab === "summary" ? "page" : "false");
+  if (S.tab === "summary") { showOnly("summary"); renderSummary(); setSeg(S.canEdit ? "chat" : "comments"); $("#whereBox").classList.add("hidden"); }
+  else { showOnly(S.pdf ? "pages" : (S.canEdit && S.metaSeen && !S.loadedAsset ? "empty" : "wait")); setSeg("comments"); $("#whereBox").classList.remove("hidden"); }
+  if (S.tab === "review" && !S.pdf && !S.metaSeen) $("#waitText").textContent = "Loading…";
+}
+function setSeg(s) {
+  S.seg = s; $("#segComments").setAttribute("aria-selected", s === "comments"); $("#segChat").setAttribute("aria-selected", s === "chat");
+  $("#commentList").classList.toggle("hidden", s !== "comments"); $("#chatList").classList.toggle("hidden", s !== "chat");
+  if (s === "chat") renderChat();
+}
+$("#segComments").addEventListener("click", () => setSeg("comments"));
+$("#segChat").addEventListener("click", () => setSeg("chat"));
+window.addEventListener("hashchange", () => setTab(location.hash.slice(1)));
+
+/* ---------- upload ---------- */
+async function newReview() {
+  if (!S.canEdit) return;
+  const nb = $("#newBtn");
+  const disarm = () => { clearTimeout(nb._t); delete nb.dataset.armed; nb.textContent = "New review"; nb.style.borderColor = ""; nb.style.color = ""; };
+  if (!nb.dataset.armed) { nb.dataset.armed = "1"; nb.textContent = "Click again to erase this review"; nb.style.borderColor = "var(--danger)"; nb.style.color = "var(--danger)"; clearTimeout(nb._t); nb._t = setTimeout(disarm, 4000); return; }
+  disarm();
+  status("Clearing…");
+  try {
+    if (S.ctl) S.ctl.abort(); S.queue = [];
+    if (dictation && dictation.active()) dictation.stop().catch(() => {});
+    clearTimeout(sendTimer); S.buffer = ""; S.partial = ""; renderHeard();
+    if (db) {
+      await Promise.all(S.comments.map((c) => db.collection("comments").doc(c.id).delete()));
+      await db.doc("review/summary").delete().catch(() => {});
+      if (S.uid) await db.doc("data/users/" + S.uid + "/chat").delete().catch(() => {});
+      await db.doc("review/meta").delete();
+    }
+    S.comments = []; S.summary = ""; S.turns = []; S.pdf = null; S.pages = []; S.loadedAsset = null; S.title = "";
+    S.hover = null; S.activeId = null; paperCache = null; S.metaSeen = true;
+    $("#pages").innerHTML = ""; $("#docTitle").textContent = "Paper review"; document.title = "Paper review"; $("#fileInput").value = "";
+    renderComments(); renderChat(); showReply(""); showWhere(null);
+    if (location.hash === "#summary") location.hash = "#review"; setTab("review");
+    status("");
+  } catch (e) { status("Couldn’t clear everything: " + ((e && (e.message || e.code)) || e), true); }
+}
+$("#newBtn").addEventListener("click", newReview);
+$("#pickBtn").addEventListener("click", () => $("#fileInput").click());
+$("#fileInput").addEventListener("change", (e) => handleFile(e.target.files && e.target.files[0]));
+const drop = $("#drop");
+["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", (e) => handleFile(e.dataTransfer.files && e.dataTransfer.files[0]));
+async function handleFile(file) {
+  if (!file) return;
+  if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) { status("Choose a PDF file.", true); return; }
+  const buf = new Uint8Array(await file.arrayBuffer());
+  paperCache = null;
+  try { await openPdf(buf, file.name); } catch (e) { showOnly("empty"); status("That PDF couldn’t be opened: " + (e.message || e), true); return; }
+  if (assets && db && S.canEdit) {
+    status("Saving the PDF with this review…");
+    try {
+      const up = await assets.upload(file);
+      S.loadedAsset = up.id;
+      await db.doc("review/meta").set({ assetId: up.id, fileName: file.name, title: S.title, pages: S.pdf.numPages, uploadedAt: Date.now() });
+      status("");
+    } catch (e) { status("The paper is open here but wasn’t saved with the review: " + (e.message || e.code || e), true); }
+  }
+}
+async function loadFromAsset(m) {
+  S.loadedAsset = m.assetId; paperCache = null;
+  try {
+    const r = await fetch("/_blob/" + m.assetId); if (!r.ok) throw new Error("HTTP " + r.status);
+    await openPdf(new Uint8Array(await r.arrayBuffer()), m.fileName);
+  } catch (e) {
+    try { await openPdf(null, m.fileName, "/_blob/" + m.assetId); }
+    catch (e2) { showOnly("wait"); $("#waitText").textContent = "The paper couldn’t be loaded (" + (e2.message || e2) + "). Reload the page to try again."; }
+  }
+}
+
+/* ---------- start ---------- */
+function applyRole() {
+  document.querySelectorAll(".editor-only").forEach((n) => n.classList.toggle("hidden", !S.canEdit));
+  $("#whereBox").classList.toggle("hidden", !S.canEdit || S.tab === "summary");
+  if (!S.canEdit) setSeg("comments");
+}
+async function init() {
+  const w = +store("review.wait"); if (w) { S.waitMs = w; $("#waitSel").value = String(w); }
+  $("#modelSel").addEventListener("change", (e) => { S.model = e.target.value; store("review.model", S.model); });
+  setTab(location.hash.slice(1)); renderComments(); renderChat(); renderSummary();
+  const use = (n) => (window.claude && window.claude.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
+  [db, sample, dictation, assets, user] = await Promise.all(["db", "sample", "dictation", "assets", "user"].map(use));
+  S.canEdit = user ? await user.canEdit().catch(() => false) : !db;
+  S.uid = user ? await user.id().catch(() => null) : null;
+  applyRole(); wireDictation(); renderComments(); renderSummary();
+  if (sample) {
+    try { const lim = await sample.limits(); if (lim && Array.isArray(lim.modelTiers) && lim.modelTiers.includes("inherit")) { const o = el("option", "", "Same as my chat"); o.value = "inherit"; $("#modelSel").append(o); } } catch {}
+  }
+  const savedModel = store("review.model"); if (savedModel && [...$("#modelSel").options].some((o) => o.value === savedModel)) { S.model = savedModel; $("#modelSel").value = savedModel; }
+  if (!db) { S.metaSeen = true; if (S.tab === "review") showOnly("empty"); status("Working without saved storage: comments last until you close the page."); return; }
+  const slow = setTimeout(() => { if (!S.metaSeen) status("The saved review can’t be reached yet."); }, 10000);
+  db.doc("review/meta").onSnapshot((snap) => {
+    clearTimeout(slow); S.metaSeen = true;
+    const m = snap.exists ? snap.data() : null;
+    if (m && m.assetId) { if (m.assetId !== S.loadedAsset) loadFromAsset(m); }
+    else if (!S.pdf && S.tab === "review") showOnly(S.canEdit ? "empty" : "wait"), $("#waitText").textContent = "The paper hasn’t been added yet.";
+  }, (e) => { clearTimeout(slow); status("The saved review couldn’t be loaded: " + (e.message || e.code), true); });
+  db.collection("comments").onSnapshot((snap) => {
+    S.comments = snap.docs.filter((d) => d.exists).map((d) => ({ id: d.id, ...d.data() }));
+    numberLegacy();
+    renderComments(); renderHighlights(); if (S.tab === "summary" && !S.busy && !S.summaryEditing) renderSummary();
+  }, (e) => status("Comments couldn’t be loaded: " + (e.message || e.code), true));
+  db.doc("review/summary").onSnapshot((snap) => {
+    const d = snap.exists ? snap.data() : null; const md = d && typeof d.markdown === "string" ? d.markdown : "";
+    if (md !== S.summary && !S.busy) { S.summary = md; if (S.tab === "summary" && !S.summaryEditing) renderSummary(); }
+  }, () => {});
+  if (S.uid && S.canEdit) {
+    try { const c = await db.doc("data/users/" + S.uid + "/chat").get(); const t = c.exists && c.data().turns; if (Array.isArray(t)) { S.turns = t.map((x) => ({ ...x })); renderChat(); } } catch {}
+  }
+}
+init();
+</script>
+</body>
+</html>
