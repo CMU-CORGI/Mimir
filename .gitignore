@@ -1,0 +1,6 @@
+# Student drafts are private and live in each review's artifact, never here.
+*.pdf
+
+.DS_Store
+node_modules/
+.claude/settings.local.json

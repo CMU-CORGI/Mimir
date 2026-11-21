@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Paper review</title>
+<title>Mímir</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
@@ -42,6 +42,14 @@ button{cursor:pointer}
 
 /* Top bar */
 .bar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;font:600 19px/1 var(--read);letter-spacing:.01em}
+.logo{width:30px;height:30px;flex:none}
+.logo.big{width:72px;height:72px;margin-bottom:14px}
+.logo .lg-ink{fill:none;stroke:var(--ink);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.logo .lg-beard{fill:var(--ink)}
+.logo .lg-cut{fill:none;stroke:var(--surface);stroke-width:2;stroke-linecap:round}
+.logo .lg-well{fill:none;stroke:var(--pointer);stroke-width:2.6;stroke-linecap:round}
+.logo .lg-eye{fill:var(--marker)}
 .doc-title{font-weight:700;font-size:15px;margin:0;flex:1 1 220px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tabs{display:flex;gap:2px;background:var(--desk);padding:3px;border-radius:9px}
 .tabs a{padding:5px 14px;border-radius:7px;text-decoration:none;color:var(--muted);font-weight:700;font-size:14px}
@@ -127,6 +135,19 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 390px}
 .card .ctext{white-space:pre-wrap;outline:none;border-radius:4px}
 .card .ctext[contenteditable="true"]:focus{background:var(--surface);box-shadow:0 0 0 1px var(--rule);padding:2px 4px;margin:-2px -4px}
 .card.flash{animation:flash 1.2s ease-out}
+.hl.revised{outline:1.5px dashed var(--danger);outline-offset:1px}
+.revised-note{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:6px 0 2px;font-size:13px}
+.revised-note .pill{color:var(--danger);border:1px solid currentColor;border-radius:999px;padding:0 8px;font-weight:700;font-size:12px}
+.revised-note .was{flex-basis:100%;font-family:var(--read);color:var(--muted);text-decoration:line-through;text-decoration-color:var(--rule);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.revised-note .linkbtn{margin-left:auto}
+.modelpick{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dlg{border:1px solid var(--rule);border-radius:12px;background:var(--raised);color:var(--ink);padding:22px 24px;max-width:min(460px,calc(100vw - 32px));box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.dlg::backdrop{background:rgba(20,23,27,.45)}
+.dlg h2{font:600 22px/1.25 var(--read);margin:0 0 10px}
+.dlg p{margin:0 0 10px}
+.dlg ul{margin:0 0 18px;padding-left:1.2em;color:var(--muted)}
+.dlg li{margin:4px 0}
+.dlg-actions{display:flex;justify-content:flex-end;gap:8px}
 @keyframes flash{from{background:var(--marker-soft)}}
 .turn{padding:8px 16px}
 .turn .who{font-size:12px;color:var(--muted)}
@@ -156,16 +177,17 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 390px}
 </head>
 <body>
 <header class="bar">
-  <h1 class="doc-title" id="docTitle">Paper review</h1>
+  <span class="brand"><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><g class="lg-ink"><path d="M17.5 33C16 18 23 8.5 32 8.5S48 18 46.5 33"/><path d="M24.5 15.5Q32 12 39.5 15.5"/><path d="M23 25.5q3 2.4 6 0M35 25.5q3 2.4 6 0"/><path d="M32 26v6.5l-2.2 1"/></g><path class="lg-beard" d="M17.5 33C19 43 24.5 50 32 55 39.5 50 45 43 46.5 33 42 37.5 37.5 38.5 32 38.5S22 37.5 17.5 33Z"/><g class="lg-cut"><path d="M25 41.5q3.5-2.6 7 0 3.5-2.6 7 0"/><path d="M29 45.5l1.2 5M35 45.5l-1.2 5"/></g><g class="lg-well"><path d="M6 60c3.5-2.4 7-2.4 10.5 0s7 2.4 10.5 0"/><path d="M37 60c3.5-2.4 7-2.4 10.5 0s7 2.4 10.5 0"/></g><ellipse class="lg-eye" cx="32" cy="60" rx="3.4" ry="2"/></svg><span class="brand-name">Mímir</span></span>
+  <h1 class="doc-title" id="docTitle"></h1>
   <nav class="tabs" aria-label="View">
     <a href="#review" id="tabReview" aria-current="page">Paper</a>
     <a href="#summary" id="tabSummary">Summary</a>
   </nav>
-  <button class="btn small editor-only hidden" id="newBtn">New review</button>
-  <label class="editor-only hidden" style="font-size:13px;color:var(--muted)">Model
-    <select class="wait" id="modelSel" aria-label="Claude model">
-      <option value="quick">Fast</option><option value="default">Balanced</option><option value="complex" selected>Best</option>
-    </select></label>
+  <button class="btn small editor-only hidden" id="replaceBtn" title="Load a revised draft and move the comments onto it">Update PDF</button>
+  <input type="file" id="replaceInput" accept="application/pdf,.pdf" hidden>
+  <button class="btn small hidden" id="exportBtn" title="Download the paper with the summary and comments, to send to the student">Export PDF</button>
+  <label class="modelpick editor-only hidden">Model
+    <select class="wait" id="modelSel" aria-label="Model for turning what you say into comments"></select></label>
   <div class="voice editor-only hidden" id="voiceBox">
     <button class="mic" id="micBtn" data-state="idle" aria-pressed="false"><span class="dot" aria-hidden="true"></span><span id="micLabel">Start talking</span></button>
     <label class="sr" style="font-size:13px;color:var(--muted)">Send after
@@ -178,6 +200,7 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 390px}
 <main>
   <section class="stage" id="stage" aria-label="Paper">
     <div class="empty hidden" id="emptyBox">
+      <svg class="logo big" viewBox="0 0 64 64" aria-hidden="true"><g class="lg-ink"><path d="M17.5 33C16 18 23 8.5 32 8.5S48 18 46.5 33"/><path d="M24.5 15.5Q32 12 39.5 15.5"/><path d="M23 25.5q3 2.4 6 0M35 25.5q3 2.4 6 0"/><path d="M32 26v6.5l-2.2 1"/></g><path class="lg-beard" d="M17.5 33C19 43 24.5 50 32 55 39.5 50 45 43 46.5 33 42 37.5 37.5 38.5 32 38.5S22 37.5 17.5 33Z"/><g class="lg-cut"><path d="M25 41.5q3.5-2.6 7 0 3.5-2.6 7 0"/><path d="M29 45.5l1.2 5M35 45.5l-1.2 5"/></g><g class="lg-well"><path d="M6 60c3.5-2.4 7-2.4 10.5 0s7 2.4 10.5 0"/><path d="M37 60c3.5-2.4 7-2.4 10.5 0s7 2.4 10.5 0"/></g><ellipse class="lg-eye" cx="32" cy="60" rx="3.4" ry="2"/></svg>
       <h1>Review a paper by talking</h1>
       <p>Open the PDF, start talking, and point at what you mean. Each comment lands on the passage under your cursor or selection.</p>
       <div class="drop" id="drop">
@@ -224,8 +247,23 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 390px}
   </aside>
 </main>
 
+<dialog id="updateDlg" class="dlg" aria-labelledby="updTitle">
+  <h2 id="updTitle">Update the PDF?</h2>
+  <p id="updText"></p>
+  <ul>
+    <li>Each comment moves to the same words in the new version.</li>
+    <li>Comments whose words were revised or deleted get flagged for you to check.</li>
+    <li>You can’t switch back to the old PDF afterwards.</li>
+  </ul>
+  <div class="dlg-actions">
+    <button class="btn" id="updCancel">Cancel</button>
+    <button class="btn primary" id="updOk">Update PDF</button>
+  </div>
+</dialog>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="anchor.js"></script>
 <script>
 "use strict";
 const $ = (s) => document.querySelector(s);
@@ -236,9 +274,9 @@ const S = {
   comments: [], summary: "", turns: [], canEdit: false, uid: null,
   tab: "review", seg: "comments", hover: null, startHover: null, startSel: null,
   buffer: "", partial: "", listening: false, queue: [], busy: false, ctl: null,
-  activeId: null, waitMs: 3000, summaryEditing: false, model: "complex", digest: [], trail: [], trailCand: null, utterOpen: false,
+  activeId: null, waitMs: 3000, summaryEditing: false, model: "default", summaryModel: "complex", digest: [], trail: [], trailCand: null, utterOpen: false,
 };
-let db = null, sample = null, dictation = null, assets = null, user = null;
+let db = null, sample = null, dictation = null, assets = null, user = null, downloads = null;
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
@@ -271,12 +309,13 @@ function sampleErr(e) {
 async function openPdf(data, name, url) {
   if (!window.pdfjsLib) throw new Error("The PDF viewer didn’t load.");
   showOnly("wait"); $("#waitText").textContent = "Opening " + (name || "the paper") + "…";
+  S.pdfBytes = data ? data.slice() : null;
   const task = pdfjsLib.getDocument({ data: data || undefined, url: url || undefined, isEvalSupported: false, disableFontFace: true, useSystemFonts: false });
   const pdf = await task.promise;
   S.pdf = pdf; S.pages = []; S.fileName = name || "";
   let title = (name || "Paper").replace(/\.pdf$/i, "");
   try { const md = await pdf.getMetadata(); const t = md && md.info && md.info.Title; if (t && t.trim()) title = t.trim(); } catch {}
-  S.title = title; $("#docTitle").textContent = title; document.title = "Review: " + title;
+  S.title = title; $("#docTitle").textContent = title; document.title = "Mímir · " + title;
   const pagesEl = $("#pages"); pagesEl.innerHTML = "";
   showOnly(S.tab === "summary" ? "summary" : "pages");
   const avail = Math.max(320, $("#stage").clientWidth - 110);
@@ -295,6 +334,7 @@ async function openPdf(data, name, url) {
   }
   for (const pg of S.pages) { try { pg.tc = await pg.page.getTextContent(); buildLines(pg); } catch (e) { pg.tc = null; } }
   renderHighlights();
+  showExport();
   for (const pg of S.pages) await renderPage(pg);
 }
 
@@ -540,9 +580,9 @@ function pointerText(p) {
   if (!p) return "(nothing)";
   const out = [];
   out.push("Selected text: " + (p.sel ? p.sel.loc + ": “" + p.sel.text + "”" : "(none)"));
-  out.push("Cursor when he started speaking: " + (p.start || "(not over the paper)"));
-  out.push("Cursor when he finished: " + (p.end || "(not over the paper)"));
-  out.push("Where the cursor rested while he spoke, in order:" + (p.trail.length ? "\n" + p.trail.map((t) => "- " + t).join("\n") : " (didn't move)"));
+  out.push("Cursor when they started speaking: " + (p.start || "(not over the paper)"));
+  out.push("Cursor when they finished: " + (p.end || "(not over the paper)"));
+  out.push("Where the cursor rested while they spoke, in order:" + (p.trail.length ? "\n" + p.trail.map((t) => "- " + t).join("\n") : " (didn't move)"));
   if (p.context) out.push("Lines around that spot (>> marks the line):\n" + p.context);
   return out.join("\n");
 }
@@ -581,7 +621,10 @@ function findQuote(pg, q, partial) {
   const { s, map } = pageIndex(pg);
   const scan = (needle) => { const out = []; let k = s.indexOf(needle); while (k >= 0 && out.length < 30) { out.push({ start: map[k], end: map[k + needle.length - 1] }); k = s.indexOf(needle, k + 1); } return out; };
   if (!partial) return scan(n);
-  for (let len = n.length - 3; len >= Math.max(12, Math.floor(n.length * 0.5)); len -= 3) { const r = scan(n.slice(0, len)); if (r.length) return r; }
+  for (let len = n.length - 3; len >= Math.max(12, Math.floor(n.length * 0.5)); len -= 3) {
+    let r = scan(n.slice(0, len)); if (r.length) return r;
+    r = scan(n.slice(n.length - len)); if (r.length) return r;
+  }
   return [];
 }
 function spanRects(pg, a, b) {
@@ -609,20 +652,25 @@ function spanRects(pg, a, b) {
   }
   return mergeRects(out);
 }
-function anchorByQuote(quote, page, near) {
+// Of several matches on a page, the one closest to where the reviewer was pointing.
+function pickMatch(pg, ms, near) {
+  if (!ms.length) return null;
+  let m = ms[0];
+  if (ms.length > 1 && near && near.page === pg.num && near.rects && near.rects[0]) {
+    let bd = 1e9;
+    for (const x of ms) { const r = spanRects(pg, x.start, x.end)[0]; if (!r) continue; const dd = Math.abs(r.y - near.rects[0].y) + 0.3 * Math.abs(r.x - near.rects[0].x); if (dd < bd) { bd = dd; m = x; } }
+  }
+  return m;
+}
+function anchorByQuote(quote, page, near, exactOnly) {
   if (!quote || !S.pages.length) return null;
   const order = []; const p0 = page && S.pages[page - 1]; if (p0) order.push(p0);
   const ref = (near && near.page) || page || 1;
   order.push(...S.pages.filter((p) => p !== p0).sort((x, y) => Math.abs(x.num - ref) - Math.abs(y.num - ref)));
-  for (const partial of [false, true]) {
+  for (const partial of exactOnly ? [false] : [false, true]) {
     for (const pg of order) {
       if (!pg.tc) continue;
-      const ms = findQuote(pg, quote, partial); if (!ms.length) continue;
-      let m = ms[0];
-      if (ms.length > 1 && near && near.page === pg.num && near.rects && near.rects[0]) {
-        let bd = 1e9;
-        for (const x of ms) { const r = spanRects(pg, x.start, x.end)[0]; if (!r) continue; const dd = Math.abs(r.y - near.rects[0].y) + 0.3 * Math.abs(r.x - near.rects[0].x); if (dd < bd) { bd = dd; m = x; } }
-      }
+      const m = pickMatch(pg, findQuote(pg, quote, partial), near); if (!m) continue;
       const rects = spanRects(pg, m.start, m.end); if (!rects.length) continue;
       const L = pg.itemLine[m.start[0]];
       return { page: pg.num, line: L ? L.ln : null, quote: String(quote).replace(/\s+/g, " ").trim().slice(0, 700), rects, kind: "quote", partial };
@@ -635,12 +683,14 @@ function anchorByQuote(quote, page, near) {
 function sortedComments() {
   return [...S.comments].sort((a, b) => (a.page ?? 1e9) - (b.page ?? 1e9) || ((a.rects && a.rects[0] ? a.rects[0].x > 0.5 : 0) - (b.rects && b.rects[0] ? b.rects[0].x > 0.5 : 0)) || ((a.rects && a.rects[0] ? a.rects[0].y : 0) - (b.rects && b.rects[0] ? b.rects[0].y : 0)) || (a.createdAt || 0) - (b.createdAt || 0));
 }
+// Why a comment's passage is flagged after a PDF update.
+const REVISED = { changed: "Passage revised", removed: "Passage deleted", lost: "Passage not found" };
 function renderHighlights() {
   for (const pg of S.pages) pg.hl.innerHTML = "";
   for (const c of S.comments) {
     const pg = c.page != null && S.pages[c.page - 1]; if (!pg || !Array.isArray(c.rects)) continue;
     for (const r of c.rects) {
-      const d = el("div", "hl" + (c.id === S.activeId ? " active" : ""));
+      const d = el("div", "hl" + (c.revised ? " revised" : "") + (c.id === S.activeId ? " active" : ""));
       d.dataset.id = c.id; d.title = c.text || "";
       d.style.left = r.x * 100 + "%"; d.style.top = r.y * 100 + "%"; d.style.width = r.w * 100 + "%"; d.style.height = r.h * 100 + "%";
       d.addEventListener("click", () => activate(c.id, "card"));
@@ -655,10 +705,17 @@ function renderComments() {
   if (!cs.length) { list.append(el("div", "none", S.canEdit ? "No comments yet. Point at a passage and say what you think." : "No comments yet.")); return; }
   for (const c of cs) {
     const card = el("div", "card" + (c.id === S.activeId ? " active" : "")); card.dataset.id = c.id;
-    const meta = el("div", "meta"); meta.append(el("span", "", (c.n ? "#" + c.n + "  " : "") + locText(c)));
+    const meta = el("div", "meta"); const locSpan = el("span", "", (c.n ? "#" + c.n + "  " : "") + locText(c)); meta.append(locSpan);
     if (S.canEdit) { const del = el("button", "linkbtn", "Delete"); del.addEventListener("click", (e) => { e.stopPropagation(); removeComment(c.id); }); meta.append(del); }
     card.append(meta);
-    if (c.quote) card.append(el("div", "quote", c.quote));
+    if (c.revised) {
+      const flag = el("div", "revised-note");
+      flag.append(el("span", "pill", REVISED[c.revised.kind] || REVISED.changed));
+      if (c.revised.was && c.revised.was !== c.quote) flag.append(el("span", "was", "Originally: “" + c.revised.was + "”"));
+      if (S.canEdit) { const ok = el("button", "linkbtn", "Dismiss"); ok.title = "Clear this flag"; ok.addEventListener("click", (e) => { e.stopPropagation(); patchComment(c.id, { revised: null }); }); flag.append(ok); }
+      card.append(flag);
+    }
+    if (c.quote && !(c.revised && c.revised.kind === "removed")) card.append(el("div", "quote", c.quote));
     const t = el("div", "ctext", c.text || "");
     if (S.canEdit) {
       t.contentEditable = "true"; t.spellcheck = true;
@@ -680,15 +737,6 @@ function activate(id, scrollTo) {
 }
 
 /* ---------- storage (db when available, memory otherwise) ---------- */
-function numberLegacy() {
-  const missing = S.comments.filter((c) => !c.n).sort((x, y) => (x.createdAt || 0) - (y.createdAt || 0));
-  if (!missing.length) return;
-  let next = S.comments.reduce((m, x) => Math.max(m, x.n || 0), 0);
-  for (const c of missing) {
-    c.n = ++next;
-    if (db && S.canEdit) db.collection("comments").doc(c.id).update({ n: c.n }).catch(() => {});
-  }
-}
 async function addComment(a, text) {
   const id = db ? db.collection("comments").doc().id : newId();
   const n = S.comments.reduce((m, x) => Math.max(m, x.n || 0), 0) + 1;
@@ -793,7 +841,7 @@ $("#micBtn").addEventListener("click", () => {
 });
 $("#sendNow").addEventListener("click", () => { S.buffer += S.partial ? " " + S.partial : ""; S.partial = ""; flush(); });
 $("#discard").addEventListener("click", () => { clearTimeout(sendTimer); S.buffer = ""; S.partial = ""; S.startHover = null; S.startSel = null; S.utterOpen = false; S.trail = []; S.trailCand = null; renderHeard(); });
-$("#waitSel").addEventListener("change", (e) => { S.waitMs = +e.target.value; store("review.wait", String(S.waitMs)); });
+$("#waitSel").addEventListener("change", (e) => { S.waitMs = +e.target.value; store("mimir.wait", String(S.waitMs)); });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && (S.buffer || S.partial)) $("#discard").click();
 });
@@ -814,16 +862,30 @@ function showReply(text, thinking) {
   const b = $("#replyBox"); b.classList.toggle("hidden", !text); b.classList.toggle("thinking", !!thinking); $("#replyText").textContent = text || "";
 }
 $("#stopBtn").addEventListener("click", () => { if (S.ctl) S.ctl.abort(); });
-function modelOpts(effort) {
-  const t = S.model;
-  if (t === "quick") return { modelTier: "quick" };
-  return { modelTier: t, effort: effort || "low" };
+// The model behind each tier is named so the pickers can say which one runs.
+// When a named model isn't available to the viewer, its tier answers instead.
+const MODELS = {
+  quick: { label: "Fast", model: "claude-haiku-5-5", name: "Haiku 5.5" },
+  default: { label: "Balanced", model: "claude-sonnet-5-5", name: "Sonnet 5.5" },
+  complex: { label: "Best", model: "claude-opus-5-5", name: "Opus 5.5" },
+};
+function modelOpts(tier, effort) {
+  if (tier === "inherit") return { modelTier: "inherit", effort };
+  const m = MODELS[tier] || MODELS.default;
+  return tier === "quick" ? { modelTier: tier, model: m.model } : { modelTier: tier, model: m.model, effort };
+}
+function modelName(tier) { return tier === "inherit" ? "the model in your chat" : (MODELS[tier] || MODELS.default).name; }
+function fillModelSelect(sel, value, inherit) {
+  sel.innerHTML = "";
+  for (const [tier, m] of Object.entries(MODELS)) { const o = el("option", "", m.label + " (" + m.name + ")"); o.value = tier; sel.append(o); }
+  if (inherit) { const o = el("option", "", "Same as my chat"); o.value = "inherit"; sel.append(o); }
+  sel.value = value;
 }
 function commentDigest() {
   const cs = sortedComments();
   const newest = [...cs].sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0))[0];
   S.digest = cs;
-  const text = cs.length ? cs.map((c) => "#" + c.n + (c === newest ? " (newest)" : "") + " [" + locText(c) + "] on “" + (c.quote || "").slice(0, 220) + "”: " + c.text).join("\n") : "(none yet)";
+  const text = cs.length ? cs.map((c) => "#" + c.n + (c === newest ? " (newest)" : "") + " [" + locText(c) + (c.revised ? ", " + REVISED[c.revised.kind].toUpperCase() + " IN A LATER DRAFT; it originally read “" + c.revised.was.slice(0, 220) + "”" : "") + "] on “" + (c.quote || "").slice(0, 220) + "”: " + c.text).join("\n") : "(none yet)";
   return { list: cs, text };
 }
 function resolveId(ref) {
@@ -838,7 +900,7 @@ function recentTalk(n) {
   return S.turns.slice(-n).map((t) => (t.role === "user" ? "Professor" : t.role === "log" ? "[Done]" : "Claude") + ": " + t.text).join("\n") || "(none)";
 }
 
-const RULES = `You are working with a professor who is reviewing his PhD student's paper draft by talking while he reads. His speech is transcribed automatically: expect transcription errors (technical names heard as common words, such as "silkworm" for "Cilkworm"), filler and false starts. Each turn gives what he said, which tab he is on, and where he was pointing: any text he selected, the exact word under his mouse cursor (marked ⟦ ⟧ in its line) when he started and when he finished speaking, and the words his cursor rested on while he spoke. Selected text is the strongest signal of what he means, then the words his cursor rested on while he talked. When the cursor is over a figure or table, you get its position on the page and the nearest caption.
+const RULES = `You are working with a professor who is reviewing a PhD student's paper draft by talking while reading. The professor's speech is transcribed automatically: expect transcription errors (technical names heard as common words, such as "silkworm" for "Cilkworm"), filler and false starts. Each turn gives what the professor said, which tab they are on, and where they were pointing: any text they selected, the exact word under the mouse cursor (marked ⟦ ⟧ in its line) when they started and when they finished speaking, and the words the cursor rested on while they spoke. Selected text is the strongest signal of what they mean, then the words the cursor rested on while they talked. When the cursor is over a figure or table, you get its position on the page and the nearest caption.
 
 You act through operations:
 - {"op":"add","text":"...","page":3,"quote":"..."} records a comment for the student.
@@ -847,15 +909,15 @@ You act through operations:
 - {"op":"replace_summary","markdown":"..."} replaces the whole review summary.
 For a comment about the paper as a whole, give "general": true instead of page and quote.
 
-Anchoring. "quote" is the exact passage the comment is about, copied verbatim from PAPER TEXT (it may span lines but not pages; leave out the "L123:" prefixes). Choose its extent from what he says: a single word or number, a phrase, a sentence, a paragraph, a list item, a table row, or a figure caption for a comment on a figure. His pointing tells you where he is looking, not how much to anchor, so never default to the whole line. "page" is the page the quote is on.
+Anchoring. "quote" is the exact passage the comment is about, copied verbatim from PAPER TEXT (it may span lines but not pages; leave out the "L123:" prefixes). Choose its extent from what they say: a single word or number, a phrase, a sentence, a paragraph, a list item, a table row, or a figure caption for a comment on a figure. Their pointing tells you where they are looking, not how much to anchor, so never default to the whole line. "page" is the page the quote is on.
 
-Comment text. His feedback, written to the student in his words and first-person voice. Remove filler and false starts and fix transcription errors using the paper's terms. Do not add points, soften, expand or summarize. If one utterance holds several distinct comments on different passages, add each one separately.
+Comment text. Their feedback, written to the student in their words and first-person voice. Remove filler and false starts and fix transcription errors using the paper's terms. Do not add points, soften, expand or summarize. If one utterance holds several distinct comments on different passages, add each one separately.
 
-Ids. Each comment has a fixed number ("#7") that never changes; use it as "id". He may refer to comments by number ("comment 7"), by content, or by where they are. "That" or "the last one" means the one marked newest. The [Done] lines in RECENT CONVERSATION record exactly which comments each turn added, edited or deleted. Only claim in "reply" what your operations do.
+Ids. Each comment has a fixed number ("#7") that never changes; use it as "id". They may refer to comments by number ("comment 7"), by content, or by where they are. "That" or "the last one" means the one marked newest. The [Done] lines in RECENT CONVERSATION record exactly which comments each turn added, edited or deleted. Only claim in "reply" what your operations do.
 
-reply. What he sees. After operations: a few words at most ("Noted.", "Moved it.", "Split into two."). For a question: answer in at most three sentences, precise and plain, citing lines like L482. For talk not meant for you: "" and no operations.
+reply. What they see. After operations: a few words at most ("Noted.", "Moved it.", "Split into two."). For a question: answer in at most three sentences, precise and plain, citing lines like L482. For talk not meant for you: "" and no operations.
 
-Summary. When he asks to change the summary, send replace_summary with the whole revised text, changing only what he asked, in his voice: direct, technically precise, not promotional, and no criticism or praise he did not make.
+Summary. When they ask to change the summary, send replace_summary with the whole revised text, changing only what they asked, in their voice: direct, technically precise, not promotional, and no criticism or praise they did not make.
 
 Reply with only JSON: {"ops":[...],"reply":"..."}`;
 
@@ -877,17 +939,17 @@ ${S.summary || "(none yet)"}
 RECENT CONVERSATION:
 ${recentTalk(24)}
 
-HE IS ON THE ${item.tab === "summary" ? "SUMMARY" : "PAPER"} TAB.
-WHERE HE WAS POINTING:
+THEY ARE ON THE ${item.tab === "summary" ? "SUMMARY" : "PAPER"} TAB.
+WHERE THEY WERE POINTING:
 ${pointerText(item.pointer)}
 
-HE SAID: “${item.text}”
+THEY SAID: “${item.text}”
 
 Reply with only the JSON object.`;
   showReply("Thinking…", true); $("#stopBtn").classList.remove("hidden");
   S.ctl = new AbortController();
   let out;
-  try { out = await sample.json(prompt, { ...modelOpts(), cache: false, signal: S.ctl.signal }); }
+  try { out = await sample.json(prompt, { ...modelOpts(S.model, "low"), cache: false, signal: S.ctl.signal }); }
   catch (e) { const m = sampleErr(e); showReply(""); if (m) status(m, true); return; }
   const ops = Array.isArray(out && out.ops) ? out.ops : [];
   const res = await applyOps(ops, item);
@@ -925,10 +987,10 @@ async function applyOps(ops, item) {
       if (!c) { failed.push("Couldn’t edit: there’s no comment " + (ref == null ? "(none named)" : String(ref)) + "."); continue; }
       const patch = {}; const what = [];
       if (text && text !== c.text) { patch.text = text; what.push("reworded"); }
-      if (op.general) { Object.assign(patch, { page: null, line: null, quote: "", rects: [] }); what.push("made general"); }
+      if (op.general) { Object.assign(patch, { page: null, line: null, quote: "", rects: [], revised: null }); what.push("made general"); }
       else if (quote) {
         const p = place();
-        if (p.a) { Object.assign(patch, { page: p.a.page, line: p.a.line, quote: p.a.quote, rects: p.a.rects }); what.push("moved to " + locText(p.a)); }
+        if (p.a) { Object.assign(patch, { page: p.a.page, line: p.a.line, quote: p.a.quote, rects: p.a.rects, revised: null }); what.push("moved to " + locText(p.a)); }
         else failed.push("Couldn’t move " + label(c) + ": “" + String(quote).slice(0, 50) + "” wasn’t found.");
       }
       if (!Object.keys(patch).length) { if (!quote) failed.push("Edit of " + label(c) + " changed nothing (no new text or passage)."); continue; }
@@ -947,14 +1009,14 @@ async function applyOps(ops, item) {
   return { done, failed };
 }
 
-const SUMMARY_RULES = `Write the review summary a professor will send to his PhD student, built only from his comments below on the student's paper draft.
+const SUMMARY_RULES = `Write the review summary a professor will send to their PhD student, built only from the professor's comments below on the student's paper draft.
 Start with "# Review: " and the paper title, then two or three sentences of overall assessment drawn only from the comments.
 Then group the comments under these headings, leaving out any heading with nothing under it:
 ## Main concerns (problems with the claims, contribution or evaluation)
 ## Section by section (issues tied to one section; name the section)
 ## Minor fixes (wording, typos, formatting)
 Each item: one or two sentences in a bulleted list. Merge duplicates. Cite line numbers like (L482) where a comment has one.
-Write in his voice, first person, addressed to the student: direct, technically precise, not promotional. Do not add criticism or praise he did not make.
+Write in the professor's voice, first person, addressed to the student: direct, technically precise, not promotional. Do not add criticism or praise they did not make.
 Output Markdown only.`;
 
 async function generateSummary() {
@@ -967,15 +1029,16 @@ PAPER TITLE: ${S.title}
 PAPER TEXT, for section names and context only:
 ${paperText()}
 
-HIS COMMENTS, in reading order:
+THE PROFESSOR'S COMMENTS, in reading order:
 ${dig.text}`;
   S.summaryEditing = false;
   renderSummary("Writing the summary…", true);
   $("#stopBtn").classList.remove("hidden"); showReply("Writing the summary from " + dig.list.length + " comments…", true);
   S.ctl = new AbortController(); S.busy = true;
   try {
-    const { text } = await sample(prompt, { ...modelOpts("medium"), cache: false, signal: S.ctl.signal, onText: ({ text }) => renderSummary(text, true) });
-    saveSummary(text.trim()); renderSummary(); showReply("Summary written. Talk to me here to change it."); addTurn("assistant", "Wrote the summary from " + dig.list.length + " comments.", "summary");
+    const res = await sample(prompt, { ...modelOpts(S.summaryModel, "medium"), cache: false, signal: S.ctl.signal, onText: ({ text }) => renderSummary(text, true) });
+    const who = res.modelApplied ? modelName(S.summaryModel) : S.summaryModel === "inherit" ? "the model in your chat" : "the " + (MODELS[res.modelTierApplied] || MODELS[S.summaryModel]).label + " tier, because " + modelName(S.summaryModel) + " wasn’t available";
+    saveSummary(res.text.trim()); renderSummary(); showReply("Summary written by " + who + ". Talk to me here to change it."); addTurn("assistant", "Wrote the summary from " + dig.list.length + " comments with " + who + ".", "summary");
   } catch (e) { const m = sampleErr(e); renderSummary(); showReply(""); if (m) status(m, true); }
   finally { S.busy = false; $("#stopBtn").classList.add("hidden"); if (S.queue.length) pump(); }
 }
@@ -1008,6 +1071,13 @@ function renderSummary(streamText, streaming) {
       setTimeout(() => { if (gen.isConnected) { delete gen.dataset.armed; gen.textContent = "Rewrite from comments"; gen.style.color = ""; } }, 4000);
     });
     tools.append(gen);
+    if (sample) {
+      const lab = el("label", "modelpick", "Model ");
+      const sel = el("select", "wait"); sel.id = "sumModelSel"; sel.setAttribute("aria-label", "Model for writing the summary");
+      fillModelSelect(sel, S.summaryModel, S.inheritOk);
+      sel.addEventListener("change", () => { S.summaryModel = sel.value; store("mimir.model.summary", S.summaryModel); });
+      lab.append(sel); tools.append(lab);
+    }
     if (S.summary) {
       const ed = el("button", "btn", S.summaryEditing ? "Save text" : "Edit text");
       ed.addEventListener("click", () => { if (S.summaryEditing) { saveSummary($("#sumEdit").value.trim()); S.summaryEditing = false; } else S.summaryEditing = true; renderSummary(); });
@@ -1047,32 +1117,6 @@ $("#segChat").addEventListener("click", () => setSeg("chat"));
 window.addEventListener("hashchange", () => setTab(location.hash.slice(1)));
 
 /* ---------- upload ---------- */
-async function newReview() {
-  if (!S.canEdit) return;
-  const nb = $("#newBtn");
-  const disarm = () => { clearTimeout(nb._t); delete nb.dataset.armed; nb.textContent = "New review"; nb.style.borderColor = ""; nb.style.color = ""; };
-  if (!nb.dataset.armed) { nb.dataset.armed = "1"; nb.textContent = "Click again to erase this review"; nb.style.borderColor = "var(--danger)"; nb.style.color = "var(--danger)"; clearTimeout(nb._t); nb._t = setTimeout(disarm, 4000); return; }
-  disarm();
-  status("Clearing…");
-  try {
-    if (S.ctl) S.ctl.abort(); S.queue = [];
-    if (dictation && dictation.active()) dictation.stop().catch(() => {});
-    clearTimeout(sendTimer); S.buffer = ""; S.partial = ""; renderHeard();
-    if (db) {
-      await Promise.all(S.comments.map((c) => db.collection("comments").doc(c.id).delete()));
-      await db.doc("review/summary").delete().catch(() => {});
-      if (S.uid) await db.doc("data/users/" + S.uid + "/chat").delete().catch(() => {});
-      await db.doc("review/meta").delete();
-    }
-    S.comments = []; S.summary = ""; S.turns = []; S.pdf = null; S.pages = []; S.loadedAsset = null; S.title = "";
-    S.hover = null; S.activeId = null; paperCache = null; S.metaSeen = true;
-    $("#pages").innerHTML = ""; $("#docTitle").textContent = "Paper review"; document.title = "Paper review"; $("#fileInput").value = "";
-    renderComments(); renderChat(); showReply(""); showWhere(null);
-    if (location.hash === "#summary") location.hash = "#review"; setTab("review");
-    status("");
-  } catch (e) { status("Couldn’t clear everything: " + ((e && (e.message || e.code)) || e), true); }
-}
-$("#newBtn").addEventListener("click", newReview);
 $("#pickBtn").addEventListener("click", () => $("#fileInput").click());
 $("#fileInput").addEventListener("change", (e) => handleFile(e.target.files && e.target.files[0]));
 const drop = $("#drop");
@@ -1106,6 +1150,295 @@ async function loadFromAsset(m) {
   }
 }
 
+/* ---------- update the PDF, carrying the comments onto the new version ---------- */
+// Every word of the paper in reading order, normalized as findQuote does, with
+// the text item and character span it came from.
+function wordIndex(pages) {
+  const words = [], at = [];
+  for (const pg of pages) {
+    pg.firstWord = words.length;
+    if (!pg.tc) continue;
+    pg.tc.items.forEach((it, i) => {
+      if (!it.str || pg.marginItems.has(i)) return;
+      let w = "", j0 = 0;
+      const end = (j) => { if (w) { words.push(w); at.push({ pg, i, j0, j1: j }); w = ""; } };
+      for (let j = 0; j < it.str.length; ) {
+        const src = String.fromCodePoint(it.str.codePointAt(j)); let kept = "";
+        for (const ch of src.normalize("NFKC").toLowerCase()) if (isWordChar(ch)) kept += ch;
+        if (kept) { if (!w) j0 = j; w += kept; } else end(j);
+        j += src.length;
+      }
+      end(it.str.length);
+    });
+  }
+  return { words, at };
+}
+function pageWords(ix, pg) { const out = []; for (let k = pg.firstWord; k < ix.at.length && ix.at[k].pg === pg; k++) out.push(k); return out; }
+function wordRects(a, b) { return spanRects(a.pg, [a.i, a.j0, 1], [b.i, b.j1 - 1, 1]); }
+function wordLine(w) { const L = w.pg.itemLine[w.i]; return L ? L.ln : null; }
+function wordsText(a, b) {
+  let out = "";
+  for (let i = a.i; i <= b.i; i++) {
+    const it = a.pg.tc.items[i]; if (!it || !it.str || a.pg.marginItems.has(i)) continue;
+    out += it.str.slice(i === a.i ? a.j0 : 0, i === b.i ? b.j1 : undefined) + (it.hasEOL ? " " : "");
+  }
+  return out.replace(/\s+/g, " ").trim().slice(0, 700);
+}
+
+// The words a comment covers in the current PDF. A comment with no text to
+// follow (a point on a figure) follows its nearest word and keeps its offset.
+function commentWords(c, ix) {
+  const pg = S.pages[c.page - 1]; if (!pg || !pg.tc) return null;
+  const near = { page: c.page, rects: c.rects };
+  const m = c.quote && (pickMatch(pg, findQuote(pg, c.quote, false), near) || pickMatch(pg, findQuote(pg, c.quote, true), near));
+  if (m) {
+    const find = (pos) => pageWords(ix, pg).find((k) => ix.at[k].i === pos[0] && pos[1] >= ix.at[k].j0 && pos[1] < ix.at[k].j1);
+    const s = find(m.start), e = find(m.end);
+    if (s != null && e != null && e >= s) return { s, e };
+  }
+  const r = c.rects && c.rects[0]; if (!r) return null;
+  let best = null, bd = 1e9;
+  for (const k of pageWords(ix, pg)) {
+    const q = wordRects(ix.at[k], ix.at[k])[0]; if (!q) continue;
+    const d = Math.hypot(q.x + q.w / 2 - r.x - r.w / 2, q.y + q.h / 2 - r.y - r.h / 2);
+    if (d < bd) { bd = d; best = { s: k, e: k, point: { dx: r.x - q.x, dy: r.y - q.y, w: r.w, h: r.h } }; }
+  }
+  return best;
+}
+
+// Where a comment goes in the new PDF, given its words in the old one.
+function placeComment(c, r, al, ix) {
+  if (!ix.at.length) return null;
+  const m = MimirAnchor.mapRange(al, r.s, r.e);
+  const at = (k) => ix.at[Math.max(0, Math.min(k, ix.at.length - 1))];
+  if (r.point) {
+    const w = at(m.start), q = wordRects(w, w)[0]; if (!q) return null;
+    const x = Math.min(Math.max(q.x + r.point.dx, 0), 1 - r.point.w), y = Math.min(Math.max(q.y + r.point.dy, 0), 1 - r.point.h);
+    return { page: w.pg.num, line: null, quote: c.quote, rects: [{ x, y, w: r.point.w, h: r.point.h }], status: "same" };
+  }
+  if (m.status === "removed") {
+    const w = at(m.start), q = wordRects(w, w)[0];
+    return { page: w.pg.num, line: wordLine(w), quote: c.quote, rects: q ? [{ x: Math.max(0, q.x - 0.006), y: q.y, w: 0.006, h: q.h }] : [], status: "removed" };
+  }
+  const s = at(m.start); let k = m.end; while (k > m.start && at(k).pg !== s.pg) k--;
+  const e = at(k);
+  return { page: s.pg.num, line: wordLine(s), quote: m.status === "same" ? c.quote : wordsText(s, e), rects: wordRects(s, e), status: m.status };
+}
+
+function confirmUpdate(fileName, pages) {
+  const dlg = $("#updateDlg");
+  const n = S.comments.length;
+  $("#updText").textContent = "Replace “" + (S.fileName || S.title) + "” (" + S.pdf.numPages + " pages) with “" + fileName + "” (" + pages + " pages). " +
+    (n ? "The " + n + " comment" + (n === 1 ? "" : "s") + " will move onto the new version." : "There are no comments to move.");
+  return new Promise((resolve) => {
+    const done = (ok) => { dlg.close(); $("#updOk").onclick = $("#updCancel").onclick = dlg.oncancel = null; resolve(ok); };
+    $("#updOk").onclick = () => done(true);
+    $("#updCancel").onclick = () => done(false);
+    dlg.oncancel = (e) => { e.preventDefault(); done(false); };
+    dlg.showModal(); $("#updCancel").focus();
+  });
+}
+
+async function updatePdf(file) {
+  if (!file || !S.canEdit || !S.pdf) return;
+  if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) { status("Choose a PDF file.", true); return; }
+  const buf = new Uint8Array(await file.arrayBuffer());
+  let pages;
+  try { const probe = await pdfjsLib.getDocument({ data: buf.slice(), isEvalSupported: false }).promise; pages = probe.numPages; probe.destroy(); }
+  catch (e) { status("That PDF couldn’t be opened: " + (e.message || e), true); return; }
+  if (!(await confirmUpdate(file.name, pages))) return;
+
+  const oldIx = wordIndex(S.pages), spans = new Map();
+  for (const c of S.comments) if (c.page != null) { const r = commentWords(c, oldIx); if (r) spans.set(c.id, r); }
+  let assetId = null;
+  if (assets && db) {
+    status("Saving the new PDF…");
+    try { assetId = (await assets.upload(file)).id; }
+    catch (e) { status("The new PDF wasn’t saved, so nothing changed: " + (e.message || e.code || e), true); return; }
+  }
+  S.loadedAsset = assetId; paperCache = null;
+  try { await openPdf(buf, file.name); }
+  catch (e) { status("The new PDF couldn’t be shown: " + (e.message || e) + ". Reload the page to see the current version.", true); return; }
+
+  const ix = wordIndex(S.pages), al = MimirAnchor.align(oldIx.words, ix.words);
+  const patches = new Map(), flagged = { changed: [], removed: [], lost: [] };
+  for (const c of S.comments) {
+    if (c.page == null) continue;
+    const r = spans.get(c.id);
+    let p = r && placeComment(c, r, al, ix);
+    // A long passage that reads the same elsewhere was moved, not rewritten.
+    if (p && p.status !== "same" && normQ(c.quote).length >= 20) {
+      const a = anchorByQuote(c.quote, p.page, null, true);
+      if (a) p = { page: a.page, line: a.line, quote: c.quote, rects: a.rects, status: "same" };
+    }
+    if (!p) p = { page: Math.min(c.page, S.pages.length), line: null, quote: c.quote, rects: c.rects, status: "lost" };
+    const { status: st, ...patch } = p;
+    patch.revised = st === "same" ? c.revised || null : { kind: st, was: c.revised ? c.revised.was : c.quote };
+    if (st !== "same") flagged[st].push("#" + c.n);
+    patches.set(c.id, patch);
+    Object.assign(c, patch);
+  }
+  renderComments(); renderHighlights();
+
+  let bad = 0;
+  if (db) {
+    try { await db.doc("review/meta").set({ assetId, fileName: file.name, title: S.title, pages: S.pdf.numPages, uploadedAt: Date.now() }); }
+    catch (e) { status("The new PDF is open here but wasn’t saved with the review: " + (e.message || e.code || e), true); return; }
+    const res = await Promise.allSettled([...patches].map(([id, patch]) => db.collection("comments").doc(id).update({ ...patch, editedAt: Date.now() })));
+    bad = res.filter((x) => x.status === "rejected").length;
+  }
+  const kept = patches.size - flagged.changed.length - flagged.removed.length - flagged.lost.length;
+  const list = (ids, what) => (ids.length ? " " + ids.length + " " + what + " (" + ids.join(", ") + ")." : "");
+  const msg = "Moved " + patches.size + " comment" + (patches.size === 1 ? "" : "s") + " onto the new PDF; " + kept + " sit on unchanged text." +
+    list(flagged.changed, "sit on revised text") + list(flagged.removed, "lost their passage, which was deleted") + list(flagged.lost, "couldn’t be followed and stayed where they were") +
+    (patches.size > kept ? " Flagged comments have a dashed outline." : "") +
+    (bad ? " " + bad + " change" + (bad === 1 ? "" : "s") + " weren’t saved." : "");
+  status(msg, !!bad); addTurn("log", msg, "review", "", !!bad);
+}
+$("#replaceBtn").addEventListener("click", () => $("#replaceInput").click());
+$("#replaceInput").addEventListener("change", (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; updatePdf(f); });
+
+/* ---------- export: the paper with the summary and comments, as one PDF ---------- */
+// The front pages hold the summary and every comment in reading order; the
+// paper follows with each comment as a highlight whose note is the comment,
+// so the student can read it in any PDF viewer.
+function showExport() { $("#exportBtn").classList.toggle("hidden", !(downloads && S.pdf)); }
+
+let pdfLibLoad = null;
+function loadPdfLib() {
+  return (pdfLibLoad ||= new Promise((resolve, reject) => {
+    const sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js";
+    sc.onload = () => resolve(window.PDFLib);
+    sc.onerror = () => { pdfLibLoad = null; reject(new Error("the PDF writer didn’t load")); };
+    document.head.append(sc);
+  }));
+}
+
+// The standard PDF fonts only have the WinAnsi characters; spell out the
+// common others and mark the rest.
+const WIN_EXTRA = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
+const SPELL = { "≤": "<=", "≥": ">=", "≠": "!=", "→": "->", "←": "<-", "⇒": "=>", "′": "'", "″": "''", "−": "-", "∼": "~", "≈": "~", "⟦": "[", "⟧": "]", " ": " ", " ": " ", " ": " ", "ﬁ": "fi", "ﬂ": "fl", "ﬀ": "ff", "ﬃ": "ffi" };
+function winAnsi(t) {
+  let out = "";
+  for (const ch of String(t).normalize("NFC")) {
+    const c = ch.codePointAt(0);
+    if (SPELL[ch] != null) out += SPELL[ch];
+    else if ((c >= 0x20 && c <= 0x7e) || (c >= 0xa0 && c <= 0xff) || WIN_EXTRA.includes(ch)) out += ch;
+    else if (ch === "\n" || ch === "\t") out += " ";
+    else out += "?";
+  }
+  return out;
+}
+
+function addHighlights(PDFLib, doc) {
+  const { PDFHexString } = PDFLib, ctx = doc.context, pages = doc.getPages();
+  // Viewers that don't draw highlights themselves use this appearance: the marker color, multiplied over the text.
+  const gs = ctx.register(ctx.obj({ Type: "ExtGState", BM: "Multiply" }));
+  for (const c of sortedComments()) {
+    const page = c.page != null && pages[c.page - 1];
+    if (!page || !Array.isArray(c.rects) || !c.rects.length || page.getRotation().angle % 360) continue;
+    const box = page.getCropBox(), quads = [], fills = [];
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const r of c.rects) {
+      const l = box.x + r.x * box.width, rt = l + r.w * box.width, top = box.y + box.height - r.y * box.height, bot = top - r.h * box.height;
+      quads.push(l, top, rt, top, l, bot, rt, bot);
+      fills.push(PDFLib.rectangle(l, bot, rt - l, top - bot), PDFLib.fill());
+      x0 = Math.min(x0, l); x1 = Math.max(x1, rt); y0 = Math.min(y0, bot); y1 = Math.max(y1, top);
+    }
+    const annot = ctx.obj({
+      Type: "Annot", Subtype: "Highlight", F: 4, Rect: [x0, y0, x1, y1], QuadPoints: quads, C: [0.95, 0.81, 0.23],
+      Contents: PDFHexString.fromText("#" + c.n + ": " + (c.text || "")), T: PDFHexString.fromText("Reviewer"),
+    });
+    const ap = ctx.formXObject([PDFLib.pushGraphicsState(), PDFLib.setGraphicsState("GS0"), PDFLib.setFillingRgbColor(0.95, 0.81, 0.23), ...fills, PDFLib.popGraphicsState()],
+      { BBox: [x0, y0, x1, y1], Resources: { ExtGState: { GS0: gs } } });
+    annot.set(PDFLib.PDFName.of("AP"), ctx.obj({ N: ctx.register(ap) }));
+    page.node.addAnnot(ctx.register(annot));
+  }
+}
+
+// Writes the summary and the comment list onto new pages at the front.
+async function addFrontPages(PDFLib, doc) {
+  const { StandardFonts, rgb } = PDFLib;
+  const F = { body: await doc.embedFont(StandardFonts.Helvetica), bold: await doc.embedFont(StandardFonts.HelveticaBold), quote: await doc.embedFont(StandardFonts.HelveticaOblique) };
+  const ink = rgb(0.11, 0.13, 0.16), muted = rgb(0.35, 0.38, 0.42);
+  const first = doc.getPage(0).getSize(), W = first.width, H = first.height, M = Math.min(64, W * 0.1), maxW = W - 2 * M;
+  let page = null, y = 0, n = 0;
+  const newPage = () => { page = doc.insertPage(n++, [W, H]); y = H - M; };
+  const wrap = (text, font, size, width) => {
+    const lines = []; let line = "";
+    for (let word of winAnsi(text).split(/ +/)) {
+      while (font.widthOfTextAtSize(word, size) > width) { let k = word.length - 1; while (k > 1 && font.widthOfTextAtSize(word.slice(0, k), size) > width) k--; if (line) { lines.push(line); line = ""; } lines.push(word.slice(0, k)); word = word.slice(k); }
+      const t = line ? line + " " + word : word;
+      if (line && font.widthOfTextAtSize(t, size) > width) { lines.push(line); line = word; } else line = t;
+    }
+    if (line) lines.push(line);
+    return lines;
+  };
+  const text = (t, { font = F.body, size = 10.5, color = ink, indent = 0, before = 0, after = 4, bullet = "" } = {}) => {
+    const lead = size * 1.38, lines = wrap(t, font, size, maxW - indent);
+    if (!page) newPage();
+    y -= before;
+    lines.forEach((ln, i) => {
+      if (y - lead < M) newPage();
+      y -= lead;
+      if (i === 0 && bullet) page.drawText(bullet, { x: M + indent - 11, y, size, font: F.body, color });
+      page.drawText(ln, { x: M + indent, y, size, font, color });
+    });
+    y -= after;
+  };
+  const strip = (t) => t.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2").replace(/`([^`]+)`/g, "$1");
+
+  const all = sortedComments(), general = all.filter((c) => c.page == null), placed = all.filter((c) => c.page != null);
+  const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+  const summary = (S.summary || "").replace(/\r/g, "").trim().split("\n");
+  const h1 = /^#\s+(.*)$/.exec(summary[0] || "");
+  text(h1 ? strip(h1[1]) : "Review: " + S.title, { font: F.bold, size: 18, after: 4 });
+  if (h1) summary.shift();
+  text((S.fileName || S.title) + " · " + date + " · " + all.length + " comment" + (all.length === 1 ? "" : "s") + ", also highlighted in the paper after these pages", { size: 9.5, color: muted, after: 14 });
+  for (const raw of summary) {
+    const ln = raw.trim(); let m;
+    if (!ln) { y -= 4; continue; }
+    if ((m = /^(#{1,3})\s+(.*)$/.exec(ln))) text(strip(m[2]), { font: F.bold, size: [0, 18, 13, 11.5][m[1].length], before: m[1].length === 1 ? 0 : 10, after: 5 });
+    else if ((m = /^[-*]\s+(.*)$/.exec(ln))) text(strip(m[1]), { indent: 14, bullet: "•", after: 3 });
+    else if ((m = /^(\d+)[.)]\s+(.*)$/.exec(ln))) text(strip(m[2]), { indent: 14, bullet: m[1] + ".", after: 3 });
+    else text(strip(ln));
+  }
+  const section = (title, cs) => {
+    if (!cs.length) return;
+    text(title, { font: F.bold, size: 13, before: 16, after: 6 });
+    for (const c of cs) {
+      text("#" + c.n + (c.page != null ? "   " + locText(c) : ""), { font: F.bold, size: 9.5, color: muted, before: 6, after: 1 });
+      if (c.quote) text("“" + c.quote.slice(0, 400) + (c.quote.length > 400 ? "…" : "") + "”", { font: F.quote, size: 9.5, color: muted, after: 2 });
+      text(c.text || "");
+    }
+  };
+  section("General comments", general);
+  section("Comments on the paper", placed);
+}
+
+async function exportPdf() {
+  if (!downloads || !S.pdf) return;
+  const btn = $("#exportBtn"); btn.disabled = true; status("Building the PDF…");
+  try {
+    const PDFLib = await loadPdfLib();
+    let bytes = S.pdfBytes;
+    if (!bytes) { const r = await fetch("/_blob/" + S.loadedAsset); if (!r.ok) throw new Error("the paper couldn’t be fetched (HTTP " + r.status + ")"); bytes = new Uint8Array(await r.arrayBuffer()); }
+    const doc = await PDFLib.PDFDocument.load(bytes.slice(), { ignoreEncryption: true });
+    addHighlights(PDFLib, doc);
+    await addFrontPages(PDFLib, doc);
+    const out = await doc.save();
+    const name = (S.title || "Paper").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 120) + " - review.pdf";
+    status("");
+    await downloads.save({ filename: name, data: out });
+    status("Saved " + name + ".");
+  } catch (e) {
+    const m = { declined: "", unavailable: "Downloads aren’t available here.", rate_limited: "A download is already waiting for you to confirm." }[e && e.code];
+    status(m != null ? m : "The PDF couldn’t be built: " + ((e && (e.message || e.code)) || e), m !== "");
+  } finally { btn.disabled = false; }
+}
+$("#exportBtn").addEventListener("click", exportPdf);
+
 /* ---------- start ---------- */
 function applyRole() {
   document.querySelectorAll(".editor-only").forEach((n) => n.classList.toggle("hidden", !S.canEdit));
@@ -1113,18 +1446,21 @@ function applyRole() {
   if (!S.canEdit) setSeg("comments");
 }
 async function init() {
-  const w = +store("review.wait"); if (w) { S.waitMs = w; $("#waitSel").value = String(w); }
-  $("#modelSel").addEventListener("change", (e) => { S.model = e.target.value; store("review.model", S.model); });
+  const w = +store("mimir.wait"); if (w) { S.waitMs = w; $("#waitSel").value = String(w); }
+  $("#modelSel").addEventListener("change", (e) => { S.model = e.target.value; store("mimir.model.comments", S.model); });
   setTab(location.hash.slice(1)); renderComments(); renderChat(); renderSummary();
   const use = (n) => (window.claude && window.claude.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
-  [db, sample, dictation, assets, user] = await Promise.all(["db", "sample", "dictation", "assets", "user"].map(use));
+  [db, sample, dictation, assets, user, downloads] = await Promise.all(["db", "sample", "dictation", "assets", "user", "downloads"].map(use));
+  showExport();
   S.canEdit = user ? await user.canEdit().catch(() => false) : !db;
   S.uid = user ? await user.id().catch(() => null) : null;
   applyRole(); wireDictation(); renderComments(); renderSummary();
-  if (sample) {
-    try { const lim = await sample.limits(); if (lim && Array.isArray(lim.modelTiers) && lim.modelTiers.includes("inherit")) { const o = el("option", "", "Same as my chat"); o.value = "inherit"; $("#modelSel").append(o); } } catch {}
-  }
-  const savedModel = store("review.model"); if (savedModel && [...$("#modelSel").options].some((o) => o.value === savedModel)) { S.model = savedModel; $("#modelSel").value = savedModel; }
+  if (sample) { try { const lim = await sample.limits(); S.inheritOk = !!(lim && Array.isArray(lim.modelTiers) && lim.modelTiers.includes("inherit")); } catch {} }
+  const known = (t) => t && (t in MODELS || (t === "inherit" && S.inheritOk));
+  const mc = store("mimir.model.comments"), ms = store("mimir.model.summary");
+  if (known(mc)) S.model = mc;
+  if (known(ms)) S.summaryModel = ms;
+  fillModelSelect($("#modelSel"), S.model, S.inheritOk);
   if (!db) { S.metaSeen = true; if (S.tab === "review") showOnly("empty"); status("Working without saved storage: comments last until you close the page."); return; }
   const slow = setTimeout(() => { if (!S.metaSeen) status("The saved review can’t be reached yet."); }, 10000);
   db.doc("review/meta").onSnapshot((snap) => {
@@ -1135,7 +1471,6 @@ async function init() {
   }, (e) => { clearTimeout(slow); status("The saved review couldn’t be loaded: " + (e.message || e.code), true); });
   db.collection("comments").onSnapshot((snap) => {
     S.comments = snap.docs.filter((d) => d.exists).map((d) => ({ id: d.id, ...d.data() }));
-    numberLegacy();
     renderComments(); renderHighlights(); if (S.tab === "summary" && !S.busy && !S.summaryEditing) renderSummary();
   }, (e) => status("Comments couldn’t be loaded: " + (e.message || e.code), true));
   db.doc("review/summary").onSnapshot((snap) => {
