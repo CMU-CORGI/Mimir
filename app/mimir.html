@@ -183,6 +183,7 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 390px}
     <a href="#review" id="tabReview" aria-current="page">Paper</a>
     <a href="#summary" id="tabSummary">Summary</a>
   </nav>
+  <button class="btn small editor-only hidden" id="undoBtn" disabled title="Nothing to undo">Undo</button>
   <button class="btn small editor-only hidden" id="replaceBtn" title="Load a revised draft and move the comments onto it">Update PDF</button>
   <input type="file" id="replaceInput" accept="application/pdf,.pdf" hidden>
   <button class="btn small hidden" id="exportBtn" title="Download the paper with the summary and comments, to send to the student">Export PDF</button>
@@ -706,13 +707,13 @@ function renderComments() {
   for (const c of cs) {
     const card = el("div", "card" + (c.id === S.activeId ? " active" : "")); card.dataset.id = c.id;
     const meta = el("div", "meta"); const locSpan = el("span", "", (c.n ? "#" + c.n + "  " : "") + locText(c)); meta.append(locSpan);
-    if (S.canEdit) { const del = el("button", "linkbtn", "Delete"); del.addEventListener("click", (e) => { e.stopPropagation(); removeComment(c.id); }); meta.append(del); }
+    if (S.canEdit) { const del = el("button", "linkbtn", "Delete"); del.addEventListener("click", (e) => { e.stopPropagation(); undoable("deleting #" + c.n, () => removeComment(c.id)); }); meta.append(del); }
     card.append(meta);
     if (c.revised) {
       const flag = el("div", "revised-note");
       flag.append(el("span", "pill", REVISED[c.revised.kind] || REVISED.changed));
       if (c.revised.was && c.revised.was !== c.quote) flag.append(el("span", "was", "Originally: “" + c.revised.was + "”"));
-      if (S.canEdit) { const ok = el("button", "linkbtn", "Dismiss"); ok.title = "Clear this flag"; ok.addEventListener("click", (e) => { e.stopPropagation(); patchComment(c.id, { revised: null }); }); flag.append(ok); }
+      if (S.canEdit) { const ok = el("button", "linkbtn", "Dismiss"); ok.title = "Clear this flag"; ok.addEventListener("click", (e) => { e.stopPropagation(); undoable("dismissing the flag on #" + c.n, () => patchComment(c.id, { revised: null })); }); flag.append(ok); }
       card.append(flag);
     }
     if (c.quote && !(c.revised && c.revised.kind === "removed")) card.append(el("div", "quote", c.quote));
@@ -721,7 +722,7 @@ function renderComments() {
       t.contentEditable = "true"; t.spellcheck = true;
       t.addEventListener("click", (e) => e.stopPropagation());
       t.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); t.blur(); } });
-      t.addEventListener("blur", () => { const v = t.textContent.trim(); if (v && v !== c.text) editComment(c.id, v); else if (!v) t.textContent = c.text; });
+      t.addEventListener("blur", () => { const v = t.textContent.trim(); if (v && v !== c.text) undoable("editing #" + c.n, () => editComment(c.id, v)); else if (!v) t.textContent = c.text; });
     }
     card.append(t);
     card.addEventListener("click", () => activate(c.id, "page"));
@@ -736,11 +737,79 @@ function activate(id, scrollTo) {
   if (scrollTo === "card") { setSeg("comments"); const c = document.querySelector('.card[data-id="' + id + '"]'); if (c) { c.scrollIntoView({ block: "nearest", behavior: "smooth" }); c.classList.remove("flash"); void c.offsetWidth; c.classList.add("flash"); } }
 }
 
+/* ---------- undo ---------- */
+// Each undo step holds what one action changed: for every comment it touched,
+// the comment before (null if the action created it) and after (null if it
+// deleted it), plus the summary and the paper, if it changed them. Undo puts
+// back the "before" state, skipping comments someone else has changed since.
+// The stack lives in this tab, so it holds only this viewer's own actions.
+const undoStack = [];
+let step = null, undoing = false;
+const plainComment = (c) => { if (!c) return null; const { id, editedAt, ...d } = c; return JSON.parse(JSON.stringify(d)); };
+// Stable text for comparing documents: sorted keys, and a null field equals a missing one.
+const canon = (v) => JSON.stringify(v, (k, x) => (x === null && k !== "" ? undefined : x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map((key) => [key, x[key]])) : x));
+const findComment = (id) => S.comments.find((x) => x.id === id);
+// Groups everything fn changes into one undo step named label ("Undo <label>").
+async function undoable(label, fn) {
+  if (step || undoing) return fn();
+  const s = step = { label, comments: new Map(), summary: undefined, paper: null };
+  renderUndo();
+  try { return await fn(); }
+  finally {
+    step = null;
+    for (const [id, e] of s.comments) e.after = plainComment(findComment(id));
+    s.summaryAfter = S.summary; s.paperAfter = S.loadedAsset;
+    if (s.comments.size || s.summary !== undefined || s.paper) { undoStack.push(s); if (undoStack.length > 50) undoStack.shift(); }
+    renderUndo();
+  }
+}
+function recordComment(id) { if (step && !step.comments.has(id)) step.comments.set(id, { before: plainComment(findComment(id)) }); }
+function renderUndo() {
+  const b = $("#undoBtn"), s = undoStack[undoStack.length - 1];
+  b.disabled = !s || !!step || undoing;
+  b.title = s ? "Undo " + s.label : "Nothing to undo";
+}
+async function undo() {
+  if (!S.canEdit || step || undoing || !undoStack.length) return;
+  const s = undoStack.pop(); undoing = true; renderUndo();
+  const skipped = [];
+  try {
+    if (s.paper && S.loadedAsset !== s.paperAfter) { status("Can’t undo " + s.label + ": the PDF has been replaced since.", true); return; }
+    if (s.paper) {
+      try { await restorePaper(s.paper); }
+      catch (e) { status("The previous PDF couldn’t be restored: " + (e.message || e.code || e), true); return; }
+    }
+    for (const [id, e] of s.comments) {
+      const cur = plainComment(findComment(id));
+      if (canon(cur) !== canon(e.after)) { const c = e.before || e.after || cur; skipped.push(c && c.n ? "#" + c.n : "a comment"); continue; }
+      if (e.before) await putComment(id, e.before); else if (cur) await removeComment(id);
+    }
+    if (s.summary !== undefined) {
+      if (S.summary !== s.summaryAfter) skipped.push("the summary");
+      else { saveSummary(s.summary); if (S.tab === "summary" && !S.summaryEditing) renderSummary(); }
+    }
+    status("Undid " + s.label + "." + (skipped.length ? " Left " + skipped.join(", ") + " alone: changed by someone else since." : ""), !!skipped.length);
+  } finally { undoing = false; renderUndo(); }
+}
+async function restorePaper(p) {
+  S.loadedAsset = p.assetId; paperCache = null;
+  if (p.bytes) await openPdf(p.bytes.slice(), p.fileName); else await openPdf(null, p.fileName, "/_blob/" + p.assetId);
+  if (db) await db.doc("review/meta").set({ assetId: p.assetId, fileName: p.fileName, title: S.title, pages: S.pdf.numPages, uploadedAt: Date.now() });
+}
+$("#undoBtn").addEventListener("click", undo);
+document.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() !== "z" || !(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey) return;
+  const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+  if (!S.canEdit) return;
+  e.preventDefault(); undo();
+});
+
 /* ---------- storage (db when available, memory otherwise) ---------- */
 async function addComment(a, text) {
   const id = db ? db.collection("comments").doc().id : newId();
   const n = S.comments.reduce((m, x) => Math.max(m, x.n || 0), 0) + 1;
   const c = { n, page: a ? a.page : null, line: a && a.line != null ? a.line : null, quote: a ? a.quote : "", rects: a && a.rects ? [...a.rects] : [], text, createdAt: Date.now() };
+  recordComment(id);
   S.comments = S.comments.filter((x) => x.id !== id).concat([{ id, ...c }]);
   renderComments(); renderHighlights(); activate(id, "card");
   if (db) await db.collection("comments").doc(id).set(c).catch((e) => status("The comment wasn’t saved: " + (e.message || e.code), true));
@@ -748,16 +817,26 @@ async function addComment(a, text) {
 }
 async function patchComment(id, patch) {
   const c = S.comments.find((x) => x.id === id); if (!c || !patch || !Object.keys(patch).length) return;
-  Object.assign(c, patch); renderComments(); renderHighlights(); activate(id, "card");
+  recordComment(id); Object.assign(c, patch); renderComments(); renderHighlights(); activate(id, "card");
   if (db) await db.collection("comments").doc(id).update({ ...patch, editedAt: Date.now() }).catch((e) => status("The change wasn’t saved: " + (e.message || e.code), true));
 }
 function editComment(id, text) { return patchComment(id, { text }); }
+// Writes the whole comment, creating it if it doesn't exist.
+async function putComment(id, c) {
+  recordComment(id);
+  S.comments = S.comments.filter((x) => x.id !== id).concat([{ id, ...c }]);
+  renderComments(); renderHighlights();
+  if (db) await db.collection("comments").doc(id).set({ ...c, editedAt: Date.now() }).catch((e) => status("The comment wasn’t saved: " + (e.message || e.code), true));
+}
 async function removeComment(id) {
-  S.comments = S.comments.filter((x) => x.id !== id); renderComments(); renderHighlights();
+  recordComment(id);
+  S.comments =S.comments.filter((x) => x.id !== id); renderComments(); renderHighlights();
   if (db) await db.collection("comments").doc(id).delete().catch((e) => status("The comment wasn’t deleted: " + (e.message || e.code), true));
 }
 let summaryWrite = Promise.resolve();
 function saveSummary(md) {
+  if (md === S.summary) return;
+  if (step && step.summary === undefined) step.summary = S.summary;
   S.summary = md;
   if (db) summaryWrite = summaryWrite.then(() => db.doc("review/summary").set({ markdown: md, updatedAt: Date.now() })).catch((e) => status("The summary wasn’t saved: " + (e.message || e.code), true));
 }
@@ -924,7 +1003,7 @@ Reply with only JSON: {"ops":[...],"reply":"..."}`;
 async function turn(item) {
   const a = item.anchor; const dig = commentDigest();
   addTurn("user", item.text, item.tab, item.tab === "review" ? locText(a) : "");
-  if (!sample) { if (item.tab === "review") await addComment(a, item.text); status("Claude isn’t available here, so what you said was saved as written."); return; }
+  if (!sample) { if (item.tab === "review") await undoable("adding a comment", () => addComment(a, item.text)); status("Claude isn’t available here, so what you said was saved as written."); return; }
   const prompt = `${RULES}
 
 PAPER TEXT (line numbers from the PDF margin; page markers in brackets):
@@ -952,7 +1031,7 @@ Reply with only the JSON object.`;
   try { out = await sample.json(prompt, { ...modelOpts(S.model, "low"), cache: false, signal: S.ctl.signal }); }
   catch (e) { const m = sampleErr(e); showReply(""); if (m) status(m, true); return; }
   const ops = Array.isArray(out && out.ops) ? out.ops : [];
-  const res = await applyOps(ops, item);
+  const res = await undoable("Claude’s last changes", () => applyOps(ops, item));
   const reply = String((out && out.reply) || "").trim();
   if (reply) addTurn("assistant", reply, item.tab);
   if (res.done.length) addTurn("log", res.done.join(" "), item.tab);
@@ -1038,7 +1117,7 @@ ${dig.text}`;
   try {
     const res = await sample(prompt, { ...modelOpts(S.summaryModel, "medium"), cache: false, signal: S.ctl.signal, onText: ({ text }) => renderSummary(text, true) });
     const who = res.modelApplied ? modelName(S.summaryModel) : S.summaryModel === "inherit" ? "the model in your chat" : "the " + (MODELS[res.modelTierApplied] || MODELS[S.summaryModel]).label + " tier, because " + modelName(S.summaryModel) + " wasn’t available";
-    saveSummary(res.text.trim()); renderSummary(); showReply("Summary written by " + who + ". Talk to me here to change it."); addTurn("assistant", "Wrote the summary from " + dig.list.length + " comments with " + who + ".", "summary");
+    undoable("writing the summary", () => saveSummary(res.text.trim())); renderSummary(); showReply("Summary written by " + who + ". Talk to me here to change it."); addTurn("assistant", "Wrote the summary from " + dig.list.length + " comments with " + who + ".", "summary");
   } catch (e) { const m = sampleErr(e); renderSummary(); showReply(""); if (m) status(m, true); }
   finally { S.busy = false; $("#stopBtn").classList.add("hidden"); if (S.queue.length) pump(); }
 }
@@ -1080,7 +1159,7 @@ function renderSummary(streamText, streaming) {
     }
     if (S.summary) {
       const ed = el("button", "btn", S.summaryEditing ? "Save text" : "Edit text");
-      ed.addEventListener("click", () => { if (S.summaryEditing) { saveSummary($("#sumEdit").value.trim()); S.summaryEditing = false; } else S.summaryEditing = true; renderSummary(); });
+      ed.addEventListener("click", () => { if (S.summaryEditing) { const md = $("#sumEdit").value.trim(); undoable("editing the summary", () => saveSummary(md)); S.summaryEditing = false; } else S.summaryEditing = true; renderSummary(); });
       tools.append(ed);
       if (S.summaryEditing) { const cancel = el("button", "linkbtn", "Cancel"); cancel.addEventListener("click", () => { S.summaryEditing = false; renderSummary(); }); tools.append(cancel); }
     }
@@ -1229,7 +1308,8 @@ function confirmUpdate(fileName, pages) {
   const dlg = $("#updateDlg");
   const n = S.comments.length;
   $("#updText").textContent = "Replace “" + (S.fileName || S.title) + "” (" + S.pdf.numPages + " pages) with “" + fileName + "” (" + pages + " pages). " +
-    (n ? "The " + n + " comment" + (n === 1 ? "" : "s") + " will move onto the new version." : "There are no comments to move.");
+    (n ? "The " + n + " comment" + (n === 1 ? "" : "s") + " will move onto the new version." : "There are no comments to move.") +
+    " Undo puts the current PDF and comments back until you close the page.";
   return new Promise((resolve) => {
     const done = (ok) => { dlg.close(); $("#updOk").onclick = $("#updCancel").onclick = dlg.oncancel = null; resolve(ok); };
     $("#updOk").onclick = () => done(true);
@@ -1247,7 +1327,10 @@ async function updatePdf(file) {
   try { const probe = await pdfjsLib.getDocument({ data: buf.slice(), isEvalSupported: false }).promise; pages = probe.numPages; probe.destroy(); }
   catch (e) { status("That PDF couldn’t be opened: " + (e.message || e), true); return; }
   if (!(await confirmUpdate(file.name, pages))) return;
-
+  return undoable("updating the PDF", () => replacePdf(file, buf));
+}
+async function replacePdf(file, buf) {
+  const prev = { assetId: S.loadedAsset, fileName: S.fileName, bytes: S.pdfBytes };
   const oldIx = wordIndex(S.pages), spans = new Map();
   for (const c of S.comments) if (c.page != null) { const r = commentWords(c, oldIx); if (r) spans.set(c.id, r); }
   let assetId = null;
@@ -1256,6 +1339,7 @@ async function updatePdf(file) {
     try { assetId = (await assets.upload(file)).id; }
     catch (e) { status("The new PDF wasn’t saved, so nothing changed: " + (e.message || e.code || e), true); return; }
   }
+  step.paper = prev;
   S.loadedAsset = assetId; paperCache = null;
   try { await openPdf(buf, file.name); }
   catch (e) { status("The new PDF couldn’t be shown: " + (e.message || e) + ". Reload the page to see the current version.", true); return; }
@@ -1276,7 +1360,7 @@ async function updatePdf(file) {
     patch.revised = st === "same" ? c.revised || null : { kind: st, was: c.revised ? c.revised.was : c.quote };
     if (st !== "same") flagged[st].push("#" + c.n);
     patches.set(c.id, patch);
-    Object.assign(c, patch);
+    recordComment(c.id); Object.assign(c, patch);
   }
   renderComments(); renderHighlights();
 
